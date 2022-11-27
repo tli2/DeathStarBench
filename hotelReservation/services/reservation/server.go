@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	// "strings"
@@ -46,6 +47,8 @@ func (s *Server) Run() error {
 	if s.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
+
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 
 	s.uuid = uuid.New().String()
 

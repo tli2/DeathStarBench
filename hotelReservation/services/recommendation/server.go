@@ -11,6 +11,7 @@ import (
 	pb "github.com/harlow/go-micro-services/services/recommendation/proto"
 	"github.com/harlow/go-micro-services/tls"
 	"github.com/opentracing/opentracing-go"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -45,6 +46,8 @@ func (s *Server) Run() error {
 	if s.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
+
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 
 	if s.hotels == nil {
 		s.hotels = loadRecommendations(s.MongoSession)

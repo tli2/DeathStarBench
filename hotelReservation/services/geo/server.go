@@ -19,6 +19,7 @@ import (
 	pb "github.com/harlow/go-micro-services/services/geo/proto"
 	"github.com/harlow/go-micro-services/tls"
 	opentracing "github.com/opentracing/opentracing-go"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -36,11 +37,11 @@ type Server struct {
 	index *geoindex.ClusteringIndex
 	uuid  string
 
-	Registry *registry.Client
-	Tracer   opentracing.Tracer
-	Port     int
-	IpAddr	 string
-	MongoSession 	*mgo.Session
+	Registry     *registry.Client
+	Tracer       opentracing.Tracer
+	Port         int
+	IpAddr       string
+	MongoSession *mgo.Session
 }
 
 // Run starts the server
@@ -48,6 +49,8 @@ func (s *Server) Run() error {
 	if s.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
+
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 
 	if s.index == nil {
 		s.index = newGeoIndex(s.MongoSession)

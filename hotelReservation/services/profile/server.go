@@ -12,6 +12,7 @@ import (
 	// "os"
 	"time"
 
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/google/uuid"
@@ -46,6 +47,8 @@ func (s *Server) Run() error {
 	if s.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
+
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 
 	s.uuid = uuid.New().String()
 
