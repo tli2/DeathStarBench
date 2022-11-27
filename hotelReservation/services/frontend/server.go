@@ -10,6 +10,7 @@ import (
 	recommendation "github.com/harlow/go-micro-services/services/recommendation/proto"
 	reservation "github.com/harlow/go-micro-services/services/reservation/proto"
 	user "github.com/harlow/go-micro-services/services/user/proto"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/harlow/go-micro-services/dialer"
@@ -39,6 +40,8 @@ func (s *Server) Run() error {
 	if s.Port == 0 {
 		return fmt.Errorf("Server port must be set")
 	}
+
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 
 	log.Info().Msg("Initializing gRPC clients...")
 	if err := s.initSearchClient("srv-search"); err != nil {
