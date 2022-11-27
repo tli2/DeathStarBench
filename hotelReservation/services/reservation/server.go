@@ -5,7 +5,7 @@ import (
 	"fmt"
 	log2 "log"
 	"net/http"
-	_ "net/http/pprof"
+	"net/http/pprof"
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -95,7 +95,7 @@ func (s *Server) Run() error {
 
 	http.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 	go func() {
-		log2.Fatalf(http.ListenAndSErve(":6060", nil))
+		log2.Fatalf(http.ListenAndServe(":6060", nil))
 	}()
 
 	log.Trace().Msgf("In reservation s.IpAddr = %s, port = %d", s.IpAddr, s.Port)
