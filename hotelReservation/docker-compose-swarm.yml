@@ -15,7 +15,7 @@ services:
   frontend:
     environment:
       - TLS
-    image: igorrudyk1/hotel_reserv_frontend_single_node:latest
+    image: arielszekely/hotel_reserv_frontend_single_node:latest
     entrypoint: frontend
     ports:
       - "5000:5000"
@@ -29,7 +29,7 @@ services:
   profile:
     environment:
       - TLS
-    image: igorrudyk1/hotel_reserv_profile_single_node:latest
+    image: arielszekely/hotel_reserv_profile_single_node:latest
     entrypoint: profile
     depends_on:
       - mongodb-profile
@@ -41,7 +41,7 @@ services:
         condition: any
 
   search:
-    image: igorrudyk1/hotel_reserv_search_single_node:latest
+    image: arielszekely/hotel_reserv_search_single_node:latest
     entrypoint: search
     depends_on:
       - consul
@@ -55,7 +55,7 @@ services:
   geo:
     environment:
       - TLS
-    image: igorrudyk1/hotel_reserv_geo_single_node:latest
+    image: arielszekely/hotel_reserv_geo_single_node:latest
     entrypoint: geo
     depends_on:
       - mongodb-geo
@@ -68,7 +68,7 @@ services:
   rate:
     environment:
       - TLS
-    image: igorrudyk1/hotel_reserv_rate_single_node:latest
+    image: arielszekely/hotel_reserv_rate_single_node:latest
     entrypoint: rate
     depends_on:
       - mongodb-rate
@@ -82,7 +82,7 @@ services:
   recommendation:
     environment:
       - TLS
-    image: igorrudyk1/hotel_reserv_recommendation_single_node:latest
+    image: arielszekely/hotel_reserv_recommendation_single_node:latest
     entrypoint: recommendation
     depends_on:
       - mongodb-recommendation
@@ -95,7 +95,7 @@ services:
   user:
     environment:
       - TLS
-    image: igorrudyk1/hotel_reserv_user_single_node:latest
+    image: arielszekely/hotel_reserv_user_single_node:latest
     entrypoint: user
     depends_on:
       - mongodb-user
@@ -108,7 +108,7 @@ services:
   reservation:
     environment:
       - TLS
-    image: igorrudyk1/hotel_reserv_reserve_single_node:latest
+    image: arielszekely/hotel_reserv_reserve_single_node:latest
     entrypoint: reservation
     depends_on:
       - mongodb-reservation
