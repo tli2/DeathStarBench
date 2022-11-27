@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/http/pprof"
 	"strconv"
 
 	recommendation "github.com/harlow/go-micro-services/services/recommendation/proto"
@@ -68,6 +69,7 @@ func (s *Server) Run() error {
 	mux.Handle("/recommendations", http.HandlerFunc(s.recommendHandler))
 	mux.Handle("/user", http.HandlerFunc(s.userHandler))
 	mux.Handle("/reservation", http.HandlerFunc(s.reservationHandler))
+	mux.Handle("/pprof", pprof.Handler("frontend"))
 
 	log.Trace().Msg("frontend starts serving")
 
