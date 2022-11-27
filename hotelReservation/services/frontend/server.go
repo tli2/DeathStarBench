@@ -69,7 +69,7 @@ func (s *Server) Run() error {
 	mux.Handle("/recommendations", http.HandlerFunc(s.recommendHandler))
 	mux.Handle("/user", http.HandlerFunc(s.userHandler))
 	mux.Handle("/reservation", http.HandlerFunc(s.reservationHandler))
-	mux.Handle("/pprof/cpu", pprof.Profile)
+	mux.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 
 	log.Trace().Msg("frontend starts serving")
 
