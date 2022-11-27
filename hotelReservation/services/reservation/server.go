@@ -3,6 +3,9 @@ package reservation
 import (
 	// "encoding/json"
 	"fmt"
+  log2 "log"
+	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
@@ -89,6 +92,11 @@ func (s *Server) Run() error {
 
 	// var result map[string]string
 	// json.Unmarshal([]byte(byteValue), &result)
+
+	http.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
+  go func() {
+    log2.Fatalf(http.ListenAndSErve(":6060", nil)
+  }
 
 	log.Trace().Msgf("In reservation s.IpAddr = %s, port = %d", s.IpAddr, s.Port)
 

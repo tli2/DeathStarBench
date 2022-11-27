@@ -13,6 +13,9 @@ spec:
     - name: "8087"
       port: 8087
       targetPort: 8087
+    - name: "6060"
+      port: 6060
+      targetPort: 6060
   selector:
     io.kompose.service: reservation
 status:
