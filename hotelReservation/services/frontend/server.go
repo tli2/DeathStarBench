@@ -269,10 +269,10 @@ func (s *Server) recommendHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please specify location params", http.StatusBadRequest)
 		return
 	}
-	Lat, _ := strconv.ParseFloat(sLat, 32)
-	lat := float32(Lat)
-	Lon, _ := strconv.ParseFloat(sLon, 32)
-	lon := float32(Lon)
+	Lat, _ := strconv.ParseFloat(sLat, 64)
+	lat := float64(Lat)
+	Lon, _ := strconv.ParseFloat(sLon, 64)
+	lon := float64(Lon)
 
 	require := r.URL.Query().Get("require")
 	if require != "dis" && require != "rate" && require != "price" {
@@ -428,10 +428,10 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please specify location params", http.StatusBadRequest)
 		return
 	}
-	Lat, _ := strconv.ParseFloat(sLat, 64)
-	lat := float64(Lat)
-	Lon, _ := strconv.ParseFloat(sLon, 64)
-	lon := float64(Lon)
+	Lat, _ := strconv.ParseFloat(sLat, 32)
+	lat := float32(Lat)
+	Lon, _ := strconv.ParseFloat(sLon, 32)
+	lon := float32(Lon)
 
 	// XXX
 	nearby, err := s.geoClient.Nearby(ctx, &geo.Request{
