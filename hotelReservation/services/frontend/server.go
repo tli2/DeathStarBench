@@ -7,6 +7,7 @@ import (
 	"net/http/pprof"
 	"strconv"
 
+	geo "github.com/harlow/go-micro-services/services/geo/proto"
 	recommendation "github.com/harlow/go-micro-services/services/recommendation/proto"
 	reservation "github.com/harlow/go-micro-services/services/reservation/proto"
 	user "github.com/harlow/go-micro-services/services/user/proto"
@@ -29,6 +30,7 @@ type Server struct {
 	recommendationClient recommendation.RecommendationClient
 	userClient           user.UserClient
 	reservationClient    reservation.ReservationClient
+	geoClient            geo.GeoClient
 	IpAddr               string
 	Port                 int
 	Tracer               opentracing.Tracer
@@ -63,6 +65,11 @@ func (s *Server) Run() error {
 	if err := s.initReservation("srv-reservation"); err != nil {
 		return err
 	}
+
+	if err := s.initGeo("srv-geo"); err != nil {
+		return err
+	}
+
 	log.Info().Msg("Successfull")
 
 	log.Trace().Msg("frontend before mux")
@@ -72,6 +79,7 @@ func (s *Server) Run() error {
 	mux.Handle("/recommendations", http.HandlerFunc(s.recommendHandler))
 	mux.Handle("/user", http.HandlerFunc(s.userHandler))
 	mux.Handle("/reservation", http.HandlerFunc(s.reservationHandler))
+	mux.Handle("/geo", http.HandlerFunc(s.geoHandler))
 	mux.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 
 	log.Trace().Msg("frontend starts serving")
@@ -153,6 +161,19 @@ func (s *Server) initReservation(name string) error {
 		return fmt.Errorf("dialer error: %v", err)
 	}
 	s.reservationClient = reservation.NewReservationClient(conn)
+	return nil
+}
+
+func (s *Server) initGeoClient(name string) error {
+	conn, err := dialer.Dial(
+		name,
+		dialer.WithTracer(s.Tracer),
+		dialer.WithBalancer(s.Registry.Client),
+	)
+	if err != nil {
+		return fmt.Errorf("dialer error: %v", err)
+	}
+	s.geoClient = geo.NewGeoClient(conn)
 	return nil
 }
 
@@ -390,6 +411,41 @@ func (s *Server) reservationHandler(w http.ResponseWriter, r *http.Request) {
 	if len(resResp.HotelId) == 0 {
 		str = "Failed. Already reserved. "
 	}
+
+	res := map[string]interface{}{
+		"message": str,
+	}
+
+	json.NewEncoder(w).Encode(res)
+}
+
+func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	ctx := r.Context()
+
+	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
+	if sLat == "" || sLon == "" {
+		http.Error(w, "Please specify location params", http.StatusBadRequest)
+		return
+	}
+	Lat, _ := strconv.ParseFloat(sLat, 64)
+	lat := float64(Lat)
+	Lon, _ := strconv.ParseFloat(sLon, 64)
+	lon := float64(Lon)
+
+	// XXX
+	nearby, err := s.geoClient.Nearby(ctx, &geo.Request{
+		Lat: lat,
+		Lon: lon,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// XXX
+
+	str := "Geo!"
 
 	res := map[string]interface{}{
 		"message": str,
