@@ -3,12 +3,15 @@ package geo
 import (
 	// "encoding/json"
 	"fmt"
+	log2 "log"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 
 	// "io/ioutil"
 	"net"
+	"net/http"
+	"net/http/pprof"
 	// "os"
 	"time"
 
@@ -104,6 +107,11 @@ func (s *Server) Run() error {
 	// json.Unmarshal([]byte(byteValue), &result)
 
 	// fmt.Printf("geo server ip = %s, port = %d\n", s.IpAddr, s.Port)
+
+	http.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
+	go func() {
+		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5000", nil))
+	}()
 
 	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
 	if err != nil {

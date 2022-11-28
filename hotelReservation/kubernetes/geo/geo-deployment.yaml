@@ -32,6 +32,7 @@ spec:
           name: hotel-reserv-geo
           ports:
             - containerPort: 8083
+            - containerPort: 5000
           resources:
             requests:
               cpu: 700m
