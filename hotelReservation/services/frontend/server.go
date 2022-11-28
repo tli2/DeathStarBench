@@ -164,7 +164,7 @@ func (s *Server) initReservation(name string) error {
 	return nil
 }
 
-func (s *Server) initGeoClient(name string) error {
+func (s *Server) initGeo(name string) error {
 	conn, err := dialer.Dial(
 		name,
 		dialer.WithTracer(s.Tracer),
@@ -269,10 +269,10 @@ func (s *Server) recommendHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Please specify location params", http.StatusBadRequest)
 		return
 	}
-	Lat, _ := strconv.ParseFloat(sLat, 64)
-	lat := float64(Lat)
-	Lon, _ := strconv.ParseFloat(sLon, 64)
-	lon := float64(Lon)
+	Lat, _ := strconv.ParseFloat(sLat, 32)
+	lat := float32(Lat)
+	Lon, _ := strconv.ParseFloat(sLon, 32)
+	lon := float32(Lon)
 
 	require := r.URL.Query().Get("require")
 	if require != "dis" && require != "rate" && require != "price" {
