@@ -433,8 +433,7 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 32)
 	lon := float32(Lon)
 
-	// XXX
-	nearby, err := s.geoClient.Nearby(ctx, &geo.Request{
+	_, err := s.geoClient.Nearby(ctx, &geo.Request{
 		Lat: lat,
 		Lon: lon,
 	})
@@ -442,8 +441,6 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// XXX
 
 	str := "Geo!"
 
