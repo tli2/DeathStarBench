@@ -194,10 +194,18 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_key, err)
 		}
 
+		getspan = s.Tracer.StartSpan(
+			"memcached/Get",
+			opentracing.ChildOf(parentCtx),
+			ext.SpanKindRPCClient,
+			memcComponentTag,
+		)
+
 		// check capacity
 		// check memc capacity
 		memc_cap_key := hotelId + "_cap"
 		item, err = s.MemcClient.Get(memc_cap_key)
+		getspan.Finish()
 		hotel_cap := 0
 		if err == nil {
 			// memcached hit
@@ -212,8 +220,15 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			}
 			hotel_cap = int(num.Number)
 
+			setspan := s.Tracer.StartSpan(
+				"memcached/Set",
+				opentracing.ChildOf(parentCtx),
+				ext.SpanKindRPCClient,
+				memcComponentTag,
+			)
 			// write to memcache
 			s.MemcClient.Set(&memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))})
+			setspan.Finish()
 		} else {
 			log.Panic().Msgf("Tried to get memc_cap_key [%v], but got memmcached error = %s", memc_cap_key, err)
 		}
@@ -226,7 +241,14 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 
 	// only update reservation number cache after check succeeds
 	for key, val := range memc_date_num_map {
+		setspan := s.Tracer.StartSpan(
+			"memcached/Set",
+			opentracing.ChildOf(parentCtx),
+			ext.SpanKindRPCClient,
+			memcComponentTag,
+		)
 		s.MemcClient.Set(&memcache.Item{Key: key, Value: []byte(strconv.Itoa(val))})
+		setspan.Finish()
 	}
 
 	inDate, _ = time.Parse(
@@ -257,6 +279,11 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 
 // CheckAvailability checks if given information is available
 func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Result, error) {
+	var parentCtx opentracing.SpanContext
+	if parent := opentracing.SpanFromContext(ctx); parent != nil {
+		parentCtx = parent.Context()
+	}
+
 	res := new(pb.Result)
 	res.HotelId = make([]string, 0)
 
@@ -290,9 +317,18 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 			log.Trace().Msgf("reservation check date %s", inDate.String()[0:10])
 			outdate := inDate.String()[0:10]
 
+			getspan := s.Tracer.StartSpan(
+				"memcached/Get",
+				opentracing.ChildOf(parentCtx),
+				ext.SpanKindRPCClient,
+				memcComponentTag,
+			)
+
 			// first check memc
 			memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
 			item, err := s.MemcClient.Get(memc_key)
+
+			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
@@ -310,18 +346,36 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					count += r.Number
 				}
 
+				setspan := s.Tracer.StartSpan(
+					"memcached/Get",
+					opentracing.ChildOf(parentCtx),
+					ext.SpanKindRPCClient,
+					memcComponentTag,
+				)
+
 				// update memcached
 				s.MemcClient.Set(&memcache.Item{Key: memc_key, Value: []byte(strconv.Itoa(count))})
+
+				setspan.Finish()
 			} else {
 				log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_key, err)
 
 			}
+
+			getspan = s.Tracer.StartSpan(
+				"memcached/Get",
+				opentracing.ChildOf(parentCtx),
+				ext.SpanKindRPCClient,
+				memcComponentTag,
+			)
 
 			// check capacity
 			// check memc capacity
 			memc_cap_key := hotelId + "_cap"
 			item, err = s.MemcClient.Get(memc_cap_key)
 			hotel_cap := 0
+
+			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
@@ -334,8 +388,16 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					log.Panic().Msgf("Tried to find hotelId [%v], but got error", hotelId, err.Error())
 				}
 				hotel_cap = int(num.Number)
+
+				setspan := s.Tracer.StartSpan(
+					"memcached/Get",
+					opentracing.ChildOf(parentCtx),
+					ext.SpanKindRPCClient,
+					memcComponentTag,
+				)
 				// update memcached
 				s.MemcClient.Set(&memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))})
+				setspan.Finish()
 			} else {
 				log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_cap_key, err)
 			}
