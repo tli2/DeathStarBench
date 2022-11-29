@@ -34,6 +34,7 @@ import (
 )
 
 var memcComponentTag = opentracing.Tag{string(ext.Component), "MEMC"}
+var dbComponentTag = opentracing.Tag{string(ext.Component), "DB"}
 
 const name = "srv-reservation"
 
@@ -176,10 +177,17 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			memc_date_num_map[memc_key] = count + int(req.RoomNumber)
 
 		} else if err == memcache.ErrCacheMiss {
+			findspan := s.Tracer.StartSpan(
+				"db/Find",
+				opentracing.ChildOf(parentCtx),
+				ext.SpanKindRPCClient,
+				dbComponentTag,
+			)
 			// memcached miss
 			log.Trace().Msgf("memcached miss")
 			reserve := make([]reservation, 0)
 			err := c.Find(&bson.M{"hotelId": hotelId, "inDate": indate, "outDate": outdate}).All(&reserve)
+			findspan.Finish()
 			if err != nil {
 				log.Panic().Msgf("Tried to find hotelId [%v] from date [%v] to date [%v], but got error", hotelId, indate, outdate, err.Error())
 			}
@@ -214,7 +222,14 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 		} else if err == memcache.ErrCacheMiss {
 			// memcached miss
 			var num number
+			findspan := s.Tracer.StartSpan(
+				"db/Find",
+				opentracing.ChildOf(parentCtx),
+				ext.SpanKindRPCClient,
+				dbComponentTag,
+			)
 			err = c1.Find(&bson.M{"hotelId": hotelId}).One(&num)
+			findspan.Finish()
 			if err != nil {
 				log.Panic().Msgf("Tried to find hotelId [%v], but got error", hotelId, err.Error())
 			}
@@ -260,12 +275,19 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 	for inDate.Before(outDate) {
 		inDate = inDate.AddDate(0, 0, 1)
 		outdate := inDate.String()[0:10]
+		insertspan := s.Tracer.StartSpan(
+			"db/Insert",
+			opentracing.ChildOf(parentCtx),
+			ext.SpanKindRPCClient,
+			dbComponentTag,
+		)
 		err := c.Insert(&reservation{
 			HotelId:      hotelId,
 			CustomerName: req.CustomerName,
 			InDate:       indate,
 			OutDate:      outdate,
 			Number:       int(req.RoomNumber)})
+		insertspan.Finish()
 		if err != nil {
 			log.Panic().Msgf("Tried to insert hotel [hotelId %v], but got error", hotelId, err.Error())
 		}
@@ -335,9 +357,17 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				count, _ = strconv.Atoi(string(item.Value))
 				log.Trace().Msgf("memcached hit %s = %d", memc_key, count)
 			} else if err == memcache.ErrCacheMiss {
+
+				findspan := s.Tracer.StartSpan(
+					"db/Find",
+					opentracing.ChildOf(parentCtx),
+					ext.SpanKindRPCClient,
+					dbComponentTag,
+				)
 				// memcached miss
 				reserve := make([]reservation, 0)
 				err := c.Find(&bson.M{"hotelId": hotelId, "inDate": indate, "outDate": outdate}).All(&reserve)
+				findspan.Finish()
 				if err != nil {
 					log.Panic().Msgf("Tried to find hotelId [%v] from date [%v] to date [%v], but got error", hotelId, indate, outdate, err.Error())
 				}
@@ -383,7 +413,14 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				log.Trace().Msgf("memcached hit %s = %d", memc_cap_key, hotel_cap)
 			} else if err == memcache.ErrCacheMiss {
 				var num number
+				findspan := s.Tracer.StartSpan(
+					"db/Find",
+					opentracing.ChildOf(parentCtx),
+					ext.SpanKindRPCClient,
+					dbComponentTag,
+				)
 				err = c1.Find(&bson.M{"hotelId": hotelId}).One(&num)
+				findspan.Finish()
 				if err != nil {
 					log.Panic().Msgf("Tried to find hotelId [%v], but got error", hotelId, err.Error())
 				}
