@@ -13,6 +13,7 @@ import (
 	pb "github.com/harlow/go-micro-services/services/reservation/proto"
 	"github.com/harlow/go-micro-services/tls"
 	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/ext"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -151,7 +152,14 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 
 		// first check memc
 		memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
+		getspan := s.Tracer.StartSpan(
+			"memcached/Get",
+			opentracing.ChildOf(ctx),
+			ext.SpanKindRPCClient,
+			"notag",
+		)
 		item, err := s.MemcClient.Get(memc_key)
+		getspan.Finish()
 		if err == nil {
 			// memcached hit
 			count, _ = strconv.Atoi(string(item.Value))
