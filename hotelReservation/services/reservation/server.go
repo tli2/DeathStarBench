@@ -33,6 +33,8 @@ import (
 	"strconv"
 )
 
+var memcComponentTag = opentracing.Tag{string(ext.Component), "MEMC"}
+
 const name = "srv-reservation"
 
 // Server implements the user service
@@ -117,6 +119,12 @@ func (s *Server) Shutdown() {
 
 // MakeReservation makes a reservation based on given information
 func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Result, error) {
+
+	var parentCtx opentracing.SpanContext
+	if parent := opentracing.SpanFromContext(ctx); parent != nil {
+		parentCtx = parent.Context()
+	}
+
 	res := new(pb.Result)
 	res.HotelId = make([]string, 0)
 
@@ -152,11 +160,12 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 
 		// first check memc
 		memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
+
 		getspan := s.Tracer.StartSpan(
 			"memcached/Get",
-			opentracing.ChildOf(ctx),
+			opentracing.ChildOf(parentCtx),
 			ext.SpanKindRPCClient,
-			"notag",
+			memcComponentTag,
 		)
 		item, err := s.MemcClient.Get(memc_key)
 		getspan.Finish()
