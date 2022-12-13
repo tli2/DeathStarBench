@@ -35,6 +35,7 @@ type Server struct {
 	Port                 int
 	Tracer               opentracing.Tracer
 	Registry             *registry.Client
+	p                    *Perf
 }
 
 // Run the server
@@ -70,6 +71,8 @@ func (s *Server) Run() error {
 		return err
 	}
 
+	s.p = MakePerf("hotelperf/k8s", "hotel")
+
 	log.Info().Msg("Successfull")
 
 	log.Trace().Msg("frontend before mux")
@@ -80,6 +83,7 @@ func (s *Server) Run() error {
 	mux.Handle("/user", http.HandlerFunc(s.userHandler))
 	mux.Handle("/reservation", http.HandlerFunc(s.reservationHandler))
 	mux.Handle("/geo", http.HandlerFunc(s.geoHandler))
+	mux.Handle("/saveresults", http.HandlerFunc(s.saveResultsHandler))
 	mux.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 
 	log.Trace().Msg("frontend starts serving")
@@ -178,6 +182,7 @@ func (s *Server) initGeo(name string) error {
 }
 
 func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -261,6 +266,7 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) recommendHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -311,6 +317,7 @@ func (s *Server) recommendHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) userHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -343,6 +350,7 @@ func (s *Server) userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) reservationHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -420,6 +428,7 @@ func (s *Server) reservationHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
+	defer s.p.TptTick(1.0)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -443,6 +452,21 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	str := "Geo!"
+
+	res := map[string]interface{}{
+		"message": str,
+	}
+
+	json.NewEncoder(w).Encode(res)
+}
+
+func (s *Server) saveresultsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	ctx := r.Context()
+
+	s.p.Done()
+
+	str := "Done!"
 
 	res := map[string]interface{}{
 		"message": str,
