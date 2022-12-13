@@ -460,7 +460,7 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func (s *Server) saveresultsHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) saveResultsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
