@@ -4,6 +4,7 @@ import (
 	// "encoding/json"
 	"fmt"
 	log2 "log"
+	"math/rand"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -17,10 +18,10 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-	"github.com/hailocab/go-geoindex"
 	"github.com/harlow/go-micro-services/registry"
 	pb "github.com/harlow/go-micro-services/services/geo/proto"
 	"github.com/harlow/go-micro-services/tls"
+	"github.com/mit-pdos/go-geoindex"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -35,10 +36,38 @@ const (
 	maxSearchResults = 5
 )
 
+const (
+	N_INDEX = 1000
+)
+
+type safeIndex struct {
+	mu     sync.Mutex
+	geoidx *geoindex.ClusteringIndex
+}
+
+func makeSafeIndex(session *mgo.Session) *safeIndex {
+	return &safeIndex{
+		geoidx: newGeoIndex(session),
+	}
+}
+
+func (si *safeIndex) KNN(center *geoindex.GeoPoint) []geoindex.Point {
+	si.mu.Lock()
+	defer si.mu.Unlock()
+
+	return si.geoidx.KNearest(
+		center,
+		maxSearchResults,
+		geoindex.Km(maxSearchRadius), func(p geoindex.Point) bool {
+			return true
+		},
+	)
+}
+
 // Server implements the geo service
 type Server struct {
-	index *geoindex.ClusteringIndex
-	uuid  string
+	indexes []*safeIndex
+	uuid    string
 
 	Registry     *registry.Client
 	Tracer       opentracing.Tracer
@@ -55,8 +84,11 @@ func (s *Server) Run() error {
 
 	zerolog.SetGlobalLevel(zerolog.Disabled)
 
-	if s.index == nil {
-		s.index = newGeoIndex(s.MongoSession)
+	if len(s.indexes) == nil {
+		s.indexes = make([]*safeIndex, 0, N_INDEX)
+		for i := 0; i < N_INDEX; i++ {
+			s.indexes = append(w.indexes, s.MongoSession)
+		}
 	}
 
 	s.uuid = uuid.New().String()
@@ -155,13 +187,9 @@ func (s *Server) getNearbyPoints(ctx context.Context, lat, lon float64) []geoind
 		Plon: lon,
 	}
 
-	return s.index.KNearest(
-		center,
-		maxSearchResults,
-		geoindex.Km(maxSearchRadius), func(p geoindex.Point) bool {
-			return true
-		},
-	)
+	r := rand.Int() % N_INDEX
+
+	return s.indexes[r].KNN(center)
 }
 
 // newGeoIndex returns a geo index with points loaded
