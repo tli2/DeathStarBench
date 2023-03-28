@@ -37,5 +37,18 @@ spec:
               cpu: 1200m
             limits:
               cpu: 4000m
+          env:
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: aws-creds
+                  key: aws-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: aws-creds
+                  key: aws-secret
+            - name: AWS_DEFAULT_REGION
+              value: "us-east-1"
       restartPolicy: Always
 status: {}
