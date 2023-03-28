@@ -5,6 +5,7 @@ import (
 	"fmt"
 	log2 "log"
 	"math/rand"
+	"sync"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
@@ -84,10 +85,10 @@ func (s *Server) Run() error {
 
 	zerolog.SetGlobalLevel(zerolog.Disabled)
 
-	if len(s.indexes) == nil {
+	if len(s.indexes) == 0 {
 		s.indexes = make([]*safeIndex, 0, N_INDEX)
 		for i := 0; i < N_INDEX; i++ {
-			s.indexes = append(w.indexes, s.MongoSession)
+			s.indexes = append(s.indexes, s.MongoSession)
 		}
 	}
 
