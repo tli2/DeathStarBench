@@ -148,6 +148,7 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 			tmpRatePlans := make(RatePlans, 0)
 			err := c.Find(&bson.M{"hotelId": hotelID}).All(&tmpRatePlans)
 			if err != nil {
+				log.Info().Msgf("Tried to find hotelId [%v], but got error", hotelID, err.Error())
 				log.Panic().Msgf("Tried to find hotelId [%v], but got error", hotelID, err.Error())
 			} else {
 				for _, r := range tmpRatePlans {
@@ -164,6 +165,7 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 			s.MemcClient.Set(&memcache.Item{Key: hotelID, Value: []byte(memc_str)})
 
 		} else {
+			log.Info().Msgf("Memmcached error while trying to get hotel [id: %v]= %s", hotelID, err)
 			log.Panic().Msgf("Memmcached error while trying to get hotel [id: %v]= %s", hotelID, err)
 		}
 	}
