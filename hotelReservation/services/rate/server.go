@@ -3,6 +3,7 @@ package rate
 import (
 	"encoding/json"
 	"fmt"
+	log2 "log"
 
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
