@@ -55,7 +55,7 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	zerolog.SetGlobalLevel(zerolog.Disabled)
+	zerolog.SetGlobalLevel(zerolog.PanicLevel)
 
 	s.uuid = uuid.New().String()
 
