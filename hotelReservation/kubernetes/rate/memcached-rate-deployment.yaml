@@ -35,6 +35,7 @@ spec:
               value: "12000"
           image: memcached
           name: hotel-reserv-rate-mmc
+          args: ["-c", "2048"]
           ports:
             - containerPort: 11211
           resources:
