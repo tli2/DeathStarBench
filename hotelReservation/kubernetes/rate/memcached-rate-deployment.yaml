@@ -31,6 +31,8 @@ spec:
               value: "128"
             - name: MEMCACHED_THREADS
               value: "2"
+            - name: MEMCACHED_CONNECTIONS
+              value: "12000"
           image: memcached
           name: hotel-reserv-rate-mmc
           ports:
