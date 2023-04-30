@@ -35,7 +35,7 @@ spec:
             - containerPort: 8087
           resources:
             requests:
-              cpu: 1200m
+              cpu: 2900m
             limits:
               cpu: 4000m
       restartPolicy: Always
