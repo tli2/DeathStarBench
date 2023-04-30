@@ -86,7 +86,7 @@ func (s *Server) Run() error {
 	mux.Handle("/geo", http.HandlerFunc(s.geoHandler))
 	mux.Handle("/saveresults", http.HandlerFunc(s.saveResultsHandler))
 	mux.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
-	mux.HandleFunc("/startrecording", www.startRecordingHandler)
+	mux.Handle("/startrecording", http.HandlerFunc(s.startRecordingHandler))
 
 	log.Trace().Msg("frontend starts serving")
 
@@ -472,13 +472,13 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
-func (s *Www) startRecordingHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) startRecordingHandler(w http.ResponseWriter, r *http.Request) {
 
 	s.record = true
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	db.DPrintf(db.HOTEL_WWW, "Start recording")
+	log.Infof("Start recording!")
 
 	str := "Started recording!"
 
