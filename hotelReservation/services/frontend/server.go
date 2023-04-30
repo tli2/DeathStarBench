@@ -33,6 +33,7 @@ type Server struct {
 	geoClient            geo.GeoClient
 	IpAddr               string
 	Port                 int
+	record               bool
 	Tracer               opentracing.Tracer
 	Registry             *registry.Client
 	p                    *Perf
@@ -85,6 +86,7 @@ func (s *Server) Run() error {
 	mux.Handle("/geo", http.HandlerFunc(s.geoHandler))
 	mux.Handle("/saveresults", http.HandlerFunc(s.saveResultsHandler))
 	mux.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
+	mux.HandleFunc("/startrecording", www.startRecordingHandler)
 
 	log.Trace().Msg("frontend starts serving")
 
@@ -182,7 +184,9 @@ func (s *Server) initGeo(name string) error {
 }
 
 func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -266,7 +270,9 @@ func (s *Server) searchHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) recommendHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -317,7 +323,9 @@ func (s *Server) recommendHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) userHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -350,7 +358,9 @@ func (s *Server) userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) reservationHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -428,7 +438,9 @@ func (s *Server) reservationHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
-	defer s.p.TptTick(1.0)
+	if s.record {
+		defer s.p.TptTick(1.0)
+	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	ctx := r.Context()
 
@@ -458,6 +470,23 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(res)
+}
+
+func (s *Www) startRecordingHandler(w http.ResponseWriter, r *http.Request) {
+
+	s.record = true
+
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	db.DPrintf(db.HOTEL_WWW, "Start recording")
+
+	str := "Started recording!"
+
+	reply := map[string]interface{}{
+		"message": str,
+	}
+
+	json.NewEncoder(w).Encode(reply)
 }
 
 func (s *Server) saveResultsHandler(w http.ResponseWriter, r *http.Request) {
