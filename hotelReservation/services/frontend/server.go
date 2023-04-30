@@ -478,7 +478,7 @@ func (s *Server) startRecordingHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	log.Infof("Start recording!")
+	log.Info().Msg("Start recording!")
 
 	str := "Started recording!"
 
