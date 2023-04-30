@@ -25,6 +25,7 @@ spec:
       labels:
         io.kompose.service: search
     spec:
+      priorityClassName: high-priority
       containers:
         - command:
             - search

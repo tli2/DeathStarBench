@@ -25,6 +25,7 @@ spec:
       labels:
         io.kompose.service: frontend
     spec:
+      priorityClassName: high-priority
       containers:
         - command:
             - frontend

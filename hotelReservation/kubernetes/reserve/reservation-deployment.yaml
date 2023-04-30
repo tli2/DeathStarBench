@@ -25,6 +25,7 @@ spec:
       labels:
         io.kompose.service: reservation
     spec:
+      priorityClassName: high-priority
       containers:
         - command:
             - reservation
