@@ -58,6 +58,7 @@ func (s *Server) Run() error {
 	zerolog.SetGlobalLevel(zerolog.PanicLevel)
 
 	s.uuid = uuid.New().String()
+	s.MemcClient.MaxIdleConns = 10000
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{

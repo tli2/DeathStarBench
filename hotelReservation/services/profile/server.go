@@ -51,6 +51,7 @@ func (s *Server) Run() error {
 	zerolog.SetGlobalLevel(zerolog.PanicLevel)
 
 	s.uuid = uuid.New().String()
+	s.MemcClient.MaxIdleConns = 10000
 
 	log.Trace().Msgf("in run s.IpAddr = %s, port = %d", s.IpAddr, s.Port)
 
