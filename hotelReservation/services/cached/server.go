@@ -142,7 +142,6 @@ func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, er
 
 	b := key2bin(req.Key)
 
-	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
 
