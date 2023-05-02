@@ -159,7 +159,6 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, er
 
 	b := key2bin(req.Key)
 
-	start := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
 
