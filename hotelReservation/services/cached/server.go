@@ -5,11 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	log2 "log"
-	"math/rand"
 	"sync"
-
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
 
 	// "io/ioutil"
 	"net"
@@ -52,6 +48,7 @@ type cache struct {
 type Server struct {
 	bins []cache
 	shrd string
+	uuid string
 
 	Registry *registry.Client
 	Tracer   opentracing.Tracer
