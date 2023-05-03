@@ -48,7 +48,7 @@ func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, error) {
 	if res.Ok {
 		return res.Val, nil
 	}
-	return res.Val, res.Ok
+	return res.Val, memcache.ErrCacheMiss
 }
 
 func (c *CacheClnt) Set(ctx context.Context, key string, b []byte) bool {
