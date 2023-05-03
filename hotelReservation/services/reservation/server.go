@@ -226,7 +226,12 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 		// check capacity
 		// check memc capacity
 		memc_cap_key := hotelId + "_cap"
-		item, err = s.MemcClient.Get(memc_cap_key)
+		if !cacheclnt.UseCached() {
+			item, err = s.MemcClient.Get(memc_cap_key)
+		} else {
+			item, err = s.cc.Get(ctx, memc_cap_key)
+		}
+
 		getspan.Finish()
 		hotel_cap := 0
 		if err == nil {
