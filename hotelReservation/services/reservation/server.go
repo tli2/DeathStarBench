@@ -11,7 +11,6 @@ import (
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	cacheclnt "github.com/harlow/go-micro-services/cacheclnt"
 	"github.com/harlow/go-micro-services/registry"
-	cached "github.com/harlow/go-micro-services/services/cached/proto"
 	pb "github.com/harlow/go-micro-services/services/reservation/proto"
 	"github.com/harlow/go-micro-services/tls"
 	"github.com/opentracing/opentracing-go"
