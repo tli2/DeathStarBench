@@ -39,7 +39,7 @@ func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, bool) {
 	req := cached.GetRequest{
 		Key: key,
 	}
-	res, err := c.ccs[n].Get(ctx, req)
+	res, err := c.ccs[n].Get(ctx, &req)
 	if err != nil {
 		log.Fatalf("Error cacheclnt get: %v", err)
 	}
@@ -52,7 +52,7 @@ func (c *CacheClnt) Set(ctx context.Context, key string, b []byte) {
 		Key: key,
 		Val: b,
 	}
-	res, err := c.ccs[n].Set(ctx, req)
+	res, err := c.ccs[n].Set(ctx, &req)
 	if err != nil {
 		log.Fatalf("Error cacheclnt set: %v", err)
 	}
