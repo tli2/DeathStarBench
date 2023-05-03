@@ -6,6 +6,7 @@ import (
 	"hash/fnv"
 	log2 "log"
 	"net/rpc"
+	"strconv"
 	"sync"
 
 	// "io/ioutil"
@@ -152,7 +153,7 @@ func (s *Server) registerWithServers() {
 				continue
 			}
 			log2.Printf("Success dial server (%v)", svc)
-			req := &cacheclnt.RegisterCacheRequest{s.IpAddr}
+			req := &cacheclnt.RegisterCacheRequest{s.IpAddr + ":" + strconv.Itoa(s.Port)}
 			res := &cacheclnt.RegisterCacheResponse{}
 			err = c.Call("CacheClnt.RegisterCache", req, res)
 			if err != nil {
