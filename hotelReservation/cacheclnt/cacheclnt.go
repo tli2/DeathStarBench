@@ -27,7 +27,7 @@ func init() {
 	case "memcached":
 		useCached = false
 	default:
-		log2.Fatalf("Unknown cache type %v", os.Getenv("CACHE_TYPE"))
+		log.Fatalf("Unknown cache type %v", os.Getenv("CACHE_TYPE"))
 	}
 }
 
