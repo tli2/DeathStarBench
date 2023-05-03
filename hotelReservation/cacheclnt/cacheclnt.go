@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/harlow/go-micro-services/dialer"
 	cached "github.com/harlow/go-micro-services/services/cached/proto"
 )
 
@@ -76,7 +77,11 @@ func (c *CacheClnt) RegisterCache(req *RegisterCacheRequest, rep *RegisterCacheR
 }
 
 func dialClient(addr string) cached.CachedClient {
-	// TODO
-	log.Fatalf("Figure out how to dial client")
-	return nil
+	// Dial the new server
+	conn, err := dialer.Dial(addr)
+	if err != nil {
+		log.Fatalf("Error dial cachesrv: %v", err)
+	}
+	// Return the new client.
+	return cached.NewCachedClient(conn)
 }
