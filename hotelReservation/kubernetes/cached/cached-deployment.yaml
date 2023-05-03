@@ -30,7 +30,7 @@ spec:
         - command:
             - cached
           image: arielszekely/hotelreservation:latest
-          name: hotel-cached-srv
+          name: hotel-reserv-cached
           ports:
             - containerPort: 8091
           resources:
