@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: cached
+spec:
+  replicas: 1
+  strategy: {}
+  template:
+    spec:
+      containers:
+        - command:
+            - cached
+          image: arielszekely/hotelreservation:latest
+          name: hotel-cached-srv
+          ports:
+            - containerPort: 8091
+          resources:
+            requests:
+              cpu: 1900m
+            limits:
+              cpu: 4000m
+          env:
+            - name: POD_IP_ADDR
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+      restartPolicy: Always
+status: {}
