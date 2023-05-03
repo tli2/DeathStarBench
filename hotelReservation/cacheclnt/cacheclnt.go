@@ -27,13 +27,8 @@ func MakeCacheClnt() *CacheClnt {
 		ccs: make([]cached.CachedClient, 0),
 	}
 
-	rpc.Register(c)
-	rpc.HandleHTTP()
-	l, err := net.Listen("tcp", CACHE_CLNT_PORT)
-	if err != nil {
-		log.Fatalf("Error Listen in Coordinator.registerServer: %v", err)
-	}
-	go http.Serve(l, nil)
+	c.startRPCServer()
+
 	return c
 }
 
@@ -74,6 +69,16 @@ func (c *CacheClnt) RegisterCache(req *RegisterCacheRequest, rep *RegisterCacheR
 	// Atomically increase the number by which we mod when selecting a shard.
 	atomic.AddInt32(&c.ncs, 1)
 	return nil
+}
+
+func (c *CacheClnt) startRPCServer() {
+	rpc.Register(c)
+	rpc.HandleHTTP()
+	l, err := net.Listen("tcp", CACHE_CLNT_PORT)
+	if err != nil {
+		log.Fatalf("Error Listen in Coordinator.registerServer: %v", err)
+	}
+	go http.Serve(l, nil)
 }
 
 func dialClient(addr string) cached.CachedClient {
