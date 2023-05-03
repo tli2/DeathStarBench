@@ -12,7 +12,6 @@ import (
 
 	"github.com/harlow/go-micro-services/registry"
 	"github.com/harlow/go-micro-services/services/cached"
-	"github.com/harlow/go-micro-services/tracing"
 	"github.com/harlow/go-micro-services/tune"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -70,7 +69,7 @@ func main() {
 		// Port:     *port,
 		Port:     serv_port,
 		IpAddr:   serv_ip,
-		Tracer:   tracer,
+		Tracer:   nil,
 		Registry: registry,
 	}
 
