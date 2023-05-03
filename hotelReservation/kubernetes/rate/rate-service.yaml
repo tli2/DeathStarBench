@@ -13,6 +13,9 @@ spec:
     - name: "8084"
       port: 8084
       targetPort: 8084
+    - name: "9999"
+      port: 9999 
+      targetPort: 9999
   selector:
     io.kompose.service: rate
 status:
