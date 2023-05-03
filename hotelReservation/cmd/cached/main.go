@@ -36,7 +36,7 @@ func main() {
 
 	serv_port, _ := strconv.Atoi(result["CachedPort"])
 	serv_ip := os.Getenv("POD_IP_ADDR")
-	if serve_ip == "" {
+	if serv_ip == "" {
 		log2.Fatalf("No POD_IP_ADDR supplied")
 	}
 
