@@ -26,6 +26,7 @@ spec:
       labels:
         io.kompose.service: cached
     spec:
+      priorityClassName: high-priority
       containers:
         - command:
             - cached

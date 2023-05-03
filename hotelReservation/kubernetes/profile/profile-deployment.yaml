@@ -25,6 +25,7 @@ spec:
       labels:
         io.kompose.service: profile
     spec:
+      priorityClassName: high-priority
       containers:
         - command:
             - profile
