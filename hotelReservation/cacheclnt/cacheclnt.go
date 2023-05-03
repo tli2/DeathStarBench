@@ -34,28 +34,28 @@ func MakeCacheClnt() *CacheClnt {
 	return c
 }
 
-func (c *CacheClnt) Get(ctx, context.Context, key string) ([]byte, bool) {
+func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, bool) {
 	n := c.key2shard(key)
 	req := cached.GetRequest{
 		Key: key,
 	}
-  res, err := c.ccs[n].Get(ctx, req)
-  if err != nil {
-    log.Fatalf("Error cacheclnt get: %v", err)
-  }
+	res, err := c.ccs[n].Get(ctx, req)
+	if err != nil {
+		log.Fatalf("Error cacheclnt get: %v", err)
+	}
 	return res.Val, res.Ok
 }
 
-func (c *CacheClnt) Set(key string, b []byte) {
+func (c *CacheClnt) Set(ctx context.Context, key string, b []byte) {
 	n := c.key2shard(key)
 	req := cached.SetRequest{
 		Key: key,
-    Val: b,
+		Val: b,
 	}
-  res, err := c.ccs[n].Set(ctx, req)
-  if err != nil {
-    log.Fatalf("Error cacheclnt set: %v", err)
-  }
+	res, err := c.ccs[n].Set(ctx, req)
+	if err != nil {
+		log.Fatalf("Error cacheclnt set: %v", err)
+	}
 }
 
 type RegisterCacheRequest struct {
@@ -69,6 +69,8 @@ type RegisterCacheResponse struct {
 func (c *CacheClnt) RegisterCache(req *RegisterCacheRequest, rep *RegisterCacheResponse) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	log.Printf("Registering new cache server %v", req.Addr)
 
 	// Make a deep copy of the client slice, so we can atomically swap it with
 	// the existing slice. This way, clients don't have to take a lock on the
