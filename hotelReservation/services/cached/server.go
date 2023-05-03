@@ -16,6 +16,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	cacheclnt "github.com/harlow/go-micro-services/cacheclnt"
 	"github.com/harlow/go-micro-services/registry"
 	pb "github.com/harlow/go-micro-services/services/cached/proto"
 	"github.com/harlow/go-micro-services/tls"
@@ -123,13 +124,14 @@ func (s *Server) Run() error {
 		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5000", nil))
 	}()
 
-	// TODO: get IP addr.
-	log2.Fatalf("Get IP addr")
-	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
-	if err != nil {
-		return fmt.Errorf("failed register: %v", err)
-	}
-	log.Info().Msg("Successfully registered in consul")
+	//	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
+	//	if err != nil {
+	//		return fmt.Errorf("failed register: %v", err)
+	//	}
+	//	log.Info().Msg("Successfully registered in consul")
+
+	// Register this cache with the servers that depend on it.
+	s.registerWithServers()
 
 	return srv.Serve(lis)
 }
@@ -137,6 +139,21 @@ func (s *Server) Run() error {
 // Shutdown cleans up any processes
 func (s *Server) Shutdown() {
 	s.Registry.Deregister(s.uuid)
+}
+
+func (s *Server) registerWithServers() {
+	for _, srvaddr := range []string{"XXX"} {
+		c, err := rpc.DialHTTP("tcp", srvaddr)
+		if err != nil {
+			log2.Fatalf("Error dial server: %v", err)
+		}
+		req := &cacheclnt.RegisterCacheRequest{s.IpAddr}
+		res := &cacheclnt.RegisterCacheResponse{}
+		err := w.cli.Call("CacheClnt.RegisterCache", req, res)
+		if err != nil {
+			log.Fatalf("Error Call RegisterCache: %v", err)
+		}
+	}
 }
 
 func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, error) {

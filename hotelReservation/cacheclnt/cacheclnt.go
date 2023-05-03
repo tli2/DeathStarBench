@@ -72,6 +72,7 @@ func (c *CacheClnt) RegisterCache(req *RegisterCacheRequest, rep *RegisterCacheR
 	defer c.mu.Unlock()
 
 	log.Printf("Registering new cache server %v", req.Addr)
+	rep.OK = true
 
 	// Make a deep copy of the client slice, so we can atomically swap it with
 	// the existing slice. This way, clients don't have to take a lock on the

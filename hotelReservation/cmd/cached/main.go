@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"io/ioutil"
+	log2 "log"
 	"os"
 	"strconv"
 	"time"
@@ -34,7 +35,10 @@ func main() {
 	json.Unmarshal([]byte(byteValue), &result)
 
 	serv_port, _ := strconv.Atoi(result["CachedPort"])
-	serv_ip := result["CachedIP"]
+	serv_ip := os.Getenv("POD_IP_ADDR")
+	if serve_ip == "" {
+		log2.Fatalf("No POD_IP_ADDR supplied")
+	}
 
 	log.Info().Msgf("Read target port: %v", serv_port)
 	log.Info().Msgf("Read consul address: %v", result["consulAddress"])
