@@ -11,6 +11,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	cacheclnt "github.com/harlow/go-micro-services/cacheclnt"
 	"github.com/harlow/go-micro-services/registry"
+	cached "github.com/harlow/go-micro-services/services/cached/proto"
 	pb "github.com/harlow/go-micro-services/services/reservation/proto"
 	"github.com/harlow/go-micro-services/tls"
 	"github.com/opentracing/opentracing-go"
@@ -357,22 +358,20 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 
 			// first check memc
 			memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
+			var item *memcache.Item
 			var err error
-			var val []byte
-			// TODO: optionally run with memcached.
+			// TODO: decide whether to use cached or memcache dynamically.
 			if false {
-				item, e := s.MemcClient.Get(memc_key)
-				err = e
-				val = item.Value
+				item, err = s.MemcClient.Get(memc_key)
 			} else {
-				val, err = s.cc.Get(ctx, memc_key)
+				item, err = s.cc.Get(ctx, memc_key)
 			}
 
 			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
-				count, _ = strconv.Atoi(string(val))
+				count, _ = strconv.Atoi(string(item.Value))
 				log.Trace().Msgf("memcached hit %s = %d", memc_key, count)
 			} else if err == memcache.ErrCacheMiss {
 
@@ -402,12 +401,12 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				)
 
 				// update memcached
-				val := []byte(strconv.Itoa(count))
-				// TODO: optionally run with memcached.
+				item := &memcache.Item{Key: memc_key, Value: []byte(strconv.Itoa(count))}
+				// TODO: decide whether to use cached or memcache dynamically.
 				if false {
-					s.MemcClient.Set(&memcache.Item{Key: memc_key, Value: val})
+					s.MemcClient.Set(item)
 				} else {
-					s.cc.Set(ctx, memc_key, val)
+					s.cc.set(ctx, item)
 				}
 
 				setspan.Finish()
@@ -426,23 +425,20 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 			// check capacity
 			// check memc capacity
 			memc_cap_key := hotelId + "_cap"
-			hotel_cap := 0
-
-			var val2 []byte
-			// TODO: optionally run with memcached.
+			// TODO: decide whether to use cached or memcache dynamically.
 			if false {
-				item, e := s.MemcClient.Get(memc_cap_key)
-				err = e
-				val2 = item.Value
+				item, err = s.MemcClient.Get(memc_cap_key)
 			} else {
-				val2, err = s.cc.Get(ctx, memc_cap_key)
+				item, err = s.cc.Get(ctx, memc_cap_key)
 			}
+
+			hotel_cap := 0
 
 			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
-				hotel_cap, _ = strconv.Atoi(string(val))
+				hotel_cap, _ = strconv.Atoi(string(item.Value))
 				log.Trace().Msgf("memcached hit %s = %d", memc_cap_key, hotel_cap)
 			} else if err == memcache.ErrCacheMiss {
 				var num number
@@ -465,15 +461,14 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					ext.SpanKindRPCClient,
 					memcComponentTag,
 				)
-				// update memcached
-				val2 := []byte(strconv.Itoa(hotel_cap))
-				// TODO: optionally run with memcached.
+				item := &memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))}
+				// TODO: decide whether to use cached or memcache dynamically.
 				if false {
-					s.MemcClient.Set(&memcache.Item{Key: memc_cap_key, Value: val2})
+					s.MemcClient.Set(item)
 				} else {
-					s.cc.Set(ctx, memc_cap_key, val2)
+					s.cc.set(ctx, item)
 				}
-
+				// update memcached
 				setspan.Finish()
 			} else {
 				log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_cap_key, err)
