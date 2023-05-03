@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	cacheclnt "github.com/harlow/go-micro-services/cacheclnt"
 	"github.com/harlow/go-micro-services/registry"
 	pb "github.com/harlow/go-micro-services/services/rate/proto"
 	"github.com/harlow/go-micro-services/tls"
@@ -121,7 +122,14 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 
 	for _, hotelID := range req.HotelIds {
 		// first check memcached
-		item, err := s.MemcClient.Get(hotelID)
+		var item *memcache.Item
+		var err error
+		if !cacheclnt.UseCached() {
+			item, err = s.MemcClient.Get(hotelID)
+		} else {
+			item, err = s.cc.Get(ctx, hotelID)
+		}
+
 		if err == nil {
 			// memcached hit
 			rate_strs := strings.Split(string(item.Value), "\n")
@@ -164,7 +172,12 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 			}
 
 			// write to memcached
-			s.MemcClient.Set(&memcache.Item{Key: hotelID, Value: []byte(memc_str)})
+			item := &memcache.Item{Key: hotelID, Value: []byte(memc_str)}
+			if !cacheclnt.UseCached() {
+				s.MemcClient.Set(item)
+			} else {
+				s.cc.Set(ctx, item)
+			}
 
 		} else {
 			log2.Printf("Memmcached error while trying to get hotel [id: %v]= %s", hotelID, err)
