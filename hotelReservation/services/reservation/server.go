@@ -406,9 +406,9 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				val := []byte(strconv.Itoa(count))
 				// TODO: optionally run with memcached.
 				if false {
-					s.MemcClient.Set(ctx, &memcache.Item{Key: memc_key, Value: val})
+					s.MemcClient.Set(&memcache.Item{Key: memc_key, Value: val})
 				} else {
-					s.cc.Set(memc_key, val)
+					s.cc.Set(ctx, memc_key, val)
 				}
 
 				setspan.Finish()
@@ -432,7 +432,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 			var val2 []byte
 			// TODO: optionally run with memcached.
 			if false {
-				item, e = s.MemcClient.Get(memc_cap_key)
+				item, e := s.MemcClient.Get(memc_cap_key)
 				err = e
 				val2 = item.Value
 			} else {
@@ -472,7 +472,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				if false {
 					s.MemcClient.Set(&memcache.Item{Key: memc_cap_key, Value: val2})
 				} else {
-					s.cc.Set(memc_cap_key, val2)
+					s.cc.Set(ctx, memc_cap_key, val2)
 				}
 
 				setspan.Finish()
