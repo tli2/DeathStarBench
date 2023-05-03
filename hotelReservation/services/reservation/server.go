@@ -173,7 +173,14 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			ext.SpanKindRPCClient,
 			memcComponentTag,
 		)
-		item, err := s.MemcClient.Get(memc_key)
+
+		var item *memcache.Item
+		var err error
+		if !cacheclnt.UseCached() {
+			item, err = s.MemcClient.Get(memc_key)
+		} else {
+			item, err = s.cc.Get(ctx, memc_key)
+		}
 		getspan.Finish()
 		if err == nil {
 			// memcached hit
@@ -250,7 +257,13 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 				memcComponentTag,
 			)
 			// write to memcache
-			s.MemcClient.Set(&memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))})
+			item := &memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))}
+			if !cacheclnt.UseCached() {
+				s.MemcClient.Set(item)
+			} else {
+				s.cc.Set(ctx, item)
+			}
+
 			setspan.Finish()
 		} else {
 			log2.Printf("Tried to get memc_cap_key [%v], but got memmcached error = %s", memc_cap_key, err)
@@ -271,7 +284,12 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			ext.SpanKindRPCClient,
 			memcComponentTag,
 		)
-		s.MemcClient.Set(&memcache.Item{Key: key, Value: []byte(strconv.Itoa(val))})
+		item := &memcache.Item{Key: key, Value: []byte(strconv.Itoa(val))}
+		if !cacheclnt.UseCached() {
+			s.MemcClient.Set(item)
+		} else {
+			s.cc.Set(ctx, item)
+		}
 		setspan.Finish()
 	}
 
