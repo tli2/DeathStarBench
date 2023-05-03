@@ -12,6 +12,8 @@ import (
 
 	"github.com/harlow/go-micro-services/dialer"
 	cached "github.com/harlow/go-micro-services/services/cached/proto"
+
+	"github.com/bradfitz/gomemcache/memcache"
 )
 
 const (
@@ -34,7 +36,7 @@ func MakeCacheClnt() *CacheClnt {
 	return c
 }
 
-func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, bool) {
+func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, error) {
 	n := c.key2shard(key)
 	req := cached.GetRequest{
 		Key: key,
@@ -42,6 +44,9 @@ func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, bool) {
 	res, err := c.ccs[n].Get(ctx, &req)
 	if err != nil {
 		log.Fatalf("Error cacheclnt get: %v", err)
+	}
+	if res.Ok {
+		return res.Val, nil
 	}
 	return res.Val, res.Ok
 }
