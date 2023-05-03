@@ -56,7 +56,7 @@ func (c *CacheClnt) Get(ctx context.Context, key string) (*memcache.Item, error)
 
 func (c *CacheClnt) Set(ctx context.Context, item *memcache.Item) bool {
 	if c.ncs == 0 {
-		return
+		return false
 	}
 	n := c.key2shard(item.Key)
 	req := cached.SetRequest{
