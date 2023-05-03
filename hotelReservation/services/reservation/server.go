@@ -11,7 +11,6 @@ import (
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	cacheclnt "github.com/harlow/go-micro-services/cacheclnt"
 	"github.com/harlow/go-micro-services/registry"
-	cached "github.com/harlow/go-micro-services/services/cached/proto"
 	pb "github.com/harlow/go-micro-services/services/reservation/proto"
 	"github.com/harlow/go-micro-services/tls"
 	"github.com/opentracing/opentracing-go"
@@ -406,7 +405,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				if false {
 					s.MemcClient.Set(item)
 				} else {
-					s.cc.set(ctx, item)
+					s.cc.Set(ctx, item)
 				}
 
 				setspan.Finish()
@@ -466,7 +465,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				if false {
 					s.MemcClient.Set(item)
 				} else {
-					s.cc.set(ctx, item)
+					s.cc.Set(ctx, item)
 				}
 				// update memcached
 				setspan.Finish()
