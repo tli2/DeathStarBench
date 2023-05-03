@@ -36,7 +36,7 @@ func MakeCacheClnt() *CacheClnt {
 	return c
 }
 
-func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, error) {
+func (c *CacheClnt) Get(ctx context.Context, key string) (*memcache.Item, error) {
 	n := c.key2shard(key)
 	req := cached.GetRequest{
 		Key: key,
@@ -46,16 +46,16 @@ func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, error) {
 		log.Fatalf("Error cacheclnt get: %v", err)
 	}
 	if res.Ok {
-		return res.Val, nil
+		return &memcache.Item{Key: key, Value: res.Val}, nil
 	}
-	return res.Val, memcache.ErrCacheMiss
+	return nil, memcache.ErrCacheMiss
 }
 
-func (c *CacheClnt) Set(ctx context.Context, key string, b []byte) bool {
+func (c *CacheClnt) Set(ctx context.Context, item *memcache.Item) bool {
 	n := c.key2shard(key)
 	req := cached.SetRequest{
-		Key: key,
-		Val: b,
+		Key: item.Key,
+		Val: item.Value,
 	}
 	res, err := c.ccs[n].Set(ctx, &req)
 	if err != nil {
