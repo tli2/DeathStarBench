@@ -1,7 +1,7 @@
 .PHONY: proto data run
 
 proto:
-	for f in services/cached/proto/cached.proto; do \
+	for f in services/**/proto/**.proto; do \
 		/home/arielck/workspace/projects/research/oldproto/bin/protoc --go_out=plugins=grpc:. $$f; \
 		echo compiled: $$f; \
 	done
