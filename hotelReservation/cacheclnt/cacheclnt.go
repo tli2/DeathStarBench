@@ -2,6 +2,7 @@ package cacheclnt
 
 import (
 	"log"
+	"net"
 	"net/http"
 	"net/rpc"
 	"sync"
@@ -36,9 +37,14 @@ func MakeCacheClnt() *CacheClnt {
 }
 
 func (c *CacheClnt) Get(key string) ([]byte, bool) {
+	// TODO
+	log.Fatalf("Unimplemented")
+	return nil, false
 }
 
 func (c *CacheClnt) Set(key string, b []byte) {
+	// TODO
+	log.Fatalf("Unimplemented")
 }
 
 type RegisterCacheRequest struct {
