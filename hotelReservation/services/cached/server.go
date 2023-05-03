@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	log2 "log"
+	"net/rpc"
 	"sync"
 
 	// "io/ioutil"
@@ -149,9 +150,9 @@ func (s *Server) registerWithServers() {
 		}
 		req := &cacheclnt.RegisterCacheRequest{s.IpAddr}
 		res := &cacheclnt.RegisterCacheResponse{}
-		err := w.cli.Call("CacheClnt.RegisterCache", req, res)
+		err = c.Call("CacheClnt.RegisterCache", req, res)
 		if err != nil {
-			log.Fatalf("Error Call RegisterCache: %v", err)
+			log2.Fatalf("Error Call RegisterCache: %v", err)
 		}
 	}
 }
