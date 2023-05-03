@@ -52,7 +52,7 @@ func (c *CacheClnt) Get(ctx context.Context, key string) (*memcache.Item, error)
 }
 
 func (c *CacheClnt) Set(ctx context.Context, item *memcache.Item) bool {
-	n := c.key2shard(key)
+	n := c.key2shard(item.Key)
 	req := cached.SetRequest{
 		Key: item.Key,
 		Val: item.Value,
