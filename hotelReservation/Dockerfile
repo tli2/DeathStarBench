@@ -5,7 +5,7 @@ WORKDIR /go/src/github.com/harlow/go-micro-services
 RUN go get gopkg.in/mgo.v2
 RUN go get github.com/bradfitz/gomemcache/memcache
 RUN go get github.com/google/uuid
+COPY . /go/src/github.com/harlow/go-micro-services
 RUN go mod init
 RUN go mod vendor
-COPY . /go/src/github.com/harlow/go-micro-services
 RUN go install -ldflags="-s -w" ./cmd/...
