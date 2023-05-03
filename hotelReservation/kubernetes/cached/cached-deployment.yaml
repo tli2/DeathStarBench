@@ -4,7 +4,7 @@ metadata:
   creationTimestamp: null
   name: cached
 spec:
-  replicas: 1
+  replicas: 3
   strategy: {}
   template:
     spec:
