@@ -138,6 +138,7 @@ func (s *Server) Shutdown() {
 }
 
 func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, error) {
+	log.Printf("Set")
 	log.Trace().Msgf("In cached get")
 
 	b := key2bin(req.Key)
@@ -154,6 +155,7 @@ func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, er
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, error) {
 	log.Trace().Msgf("In cached get")
+	log.Printf("Get")
 
 	res := &pb.GetResult{}
 

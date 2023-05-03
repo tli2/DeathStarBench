@@ -33,9 +33,6 @@ func main() {
 	var result map[string]string
 	json.Unmarshal([]byte(byteValue), &result)
 
-	log.Info().Msg("Initializing DB connection...")
-	log.Info().Msg("Successfull")
-
 	serv_port, _ := strconv.Atoi(result["CachedPort"])
 	serv_ip := result["GeoIP"]
 
