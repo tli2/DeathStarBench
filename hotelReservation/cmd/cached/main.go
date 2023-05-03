@@ -34,7 +34,7 @@ func main() {
 	json.Unmarshal([]byte(byteValue), &result)
 
 	serv_port, _ := strconv.Atoi(result["CachedPort"])
-	serv_ip := result["GeoIP"]
+	serv_ip := result["CachedIP"]
 
 	log.Info().Msgf("Read target port: %v", serv_port)
 	log.Info().Msgf("Read consul address: %v", result["consulAddress"])

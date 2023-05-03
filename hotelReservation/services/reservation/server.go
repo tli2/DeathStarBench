@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"github.com/harlow/go-micro-services/registry"
+	cacheclnt "github.com/harlow/go-micro-services/services/cacheclnt"
+	cached "github.com/harlow/go-micro-services/services/cached/proto"
 	pb "github.com/harlow/go-micro-services/services/reservation/proto"
 	"github.com/harlow/go-micro-services/tls"
 	"github.com/opentracing/opentracing-go"
@@ -40,6 +42,8 @@ const name = "srv-reservation"
 
 // Server implements the user service
 type Server struct {
+	ccs []cached.CachedClient
+
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string

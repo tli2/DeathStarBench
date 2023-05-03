@@ -29,7 +29,7 @@ import (
 
 const (
 	NBIN = 1009
-	name = "cached"
+	name = "srv-cached"
 )
 
 func key2bin(key string) uint32 {
@@ -123,6 +123,8 @@ func (s *Server) Run() error {
 		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5000", nil))
 	}()
 
+	// TODO: get IP addr.
+	log2.Fatalf("Get IP addr")
 	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
 	if err != nil {
 		return fmt.Errorf("failed register: %v", err)
