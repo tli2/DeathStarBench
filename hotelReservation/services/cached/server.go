@@ -144,7 +144,7 @@ func (s *Server) Shutdown() {
 
 func (s *Server) registerWithServers() {
 	for _, svc := range []string{"reservation"} { //, "rate", "profile"} {
-		c, err := rpc.DialHTTP("tcp", "http://"+svc+cacheclnt.CACHE_CLNT_PORT)
+		c, err := rpc.DialHTTP("tcp", svc+cacheclnt.CACHE_CLNT_PORT)
 		if err != nil {
 			log2.Fatalf("Error dial server: %v", err)
 		}
