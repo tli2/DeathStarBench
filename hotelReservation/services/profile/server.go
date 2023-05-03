@@ -17,6 +17,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	cacheclnt "github.com/harlow/go-micro-services/cacheclnt"
 	"github.com/harlow/go-micro-services/registry"
 	pb "github.com/harlow/go-micro-services/services/profile/proto"
 	"github.com/harlow/go-micro-services/tls"
@@ -33,6 +34,8 @@ const name = "srv-profile"
 
 // Server implements the profile service
 type Server struct {
+	cc *cacheclnt.CacheClnt
+
 	Tracer       opentracing.Tracer
 	uuid         string
 	Port         int
@@ -52,6 +55,7 @@ func (s *Server) Run() error {
 
 	s.uuid = uuid.New().String()
 	s.MemcClient.MaxIdleConns = 8000
+	s.cc = cacheclnt.MakeCacheClnt()
 
 	log.Trace().Msgf("in run s.IpAddr = %s, port = %d", s.IpAddr, s.Port)
 
@@ -124,7 +128,14 @@ func (s *Server) GetProfiles(ctx context.Context, req *pb.Request) (*pb.Result, 
 
 	for _, i := range req.HotelIds {
 		// first check memcached
-		item, err := s.MemcClient.Get(i)
+		var item *memcache.Item
+		var err error
+		if !cacheclnt.UseCached() {
+			item, err = s.MemcClient.Get(i)
+		} else {
+			item, err = s.cc.Get(ctx, i)
+		}
+
 		if err == nil {
 			// memcached hit
 			profile_str := string(item.Value)
@@ -159,7 +170,12 @@ func (s *Server) GetProfiles(ctx context.Context, req *pb.Request) (*pb.Result, 
 			memc_str := string(prof_json)
 
 			// write to memcached
-			s.MemcClient.Set(&memcache.Item{Key: i, Value: []byte(memc_str)})
+			item := &memcache.Item{Key: i, Value: []byte(memc_str)}
+			if !cacheclnt.UseCached() {
+				s.MemcClient.Set(item)
+			} else {
+				s.cc.Set(ctx, item)
+			}
 
 		} else {
 			log.Panic().Msgf("Tried to get hotelId [%v], but got memmcached error = %s", i, err)

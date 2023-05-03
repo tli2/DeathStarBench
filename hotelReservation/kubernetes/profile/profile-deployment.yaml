@@ -32,10 +32,14 @@ spec:
           name: hotel-reserv-profile
           ports:
             - containerPort: 8081
+            - containerPort: 9999
           resources:
             requests:
               cpu: 1900m
             limits:
               cpu: 4000m
+          envFrom:
+          - configMapRef:
+              name: env-config
       restartPolicy: Always
 status: {}
