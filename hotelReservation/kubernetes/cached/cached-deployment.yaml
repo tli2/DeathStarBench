@@ -43,5 +43,7 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: status.podIP
+            - name: CACHE_TYPE
+              value: "cached"
       restartPolicy: Always
 status: {}

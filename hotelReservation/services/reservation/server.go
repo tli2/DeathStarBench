@@ -359,8 +359,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 			memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
 			var item *memcache.Item
 			var err error
-			// TODO: decide whether to use cached or memcache dynamically.
-			if false {
+			if !cacheclnt.UseCached() {
 				item, err = s.MemcClient.Get(memc_key)
 			} else {
 				item, err = s.cc.Get(ctx, memc_key)
@@ -401,8 +400,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 
 				// update memcached
 				item := &memcache.Item{Key: memc_key, Value: []byte(strconv.Itoa(count))}
-				// TODO: decide whether to use cached or memcache dynamically.
-				if false {
+				if !cacheclnt.UseCached() {
 					s.MemcClient.Set(item)
 				} else {
 					s.cc.Set(ctx, item)
@@ -424,8 +422,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 			// check capacity
 			// check memc capacity
 			memc_cap_key := hotelId + "_cap"
-			// TODO: decide whether to use cached or memcache dynamically.
-			if false {
+			if !cacheclnt.UseCached() {
 				item, err = s.MemcClient.Get(memc_cap_key)
 			} else {
 				item, err = s.cc.Get(ctx, memc_cap_key)
@@ -461,8 +458,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					memcComponentTag,
 				)
 				item := &memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))}
-				// TODO: decide whether to use cached or memcache dynamically.
-				if false {
+				if !cacheclnt.UseCached() {
 					s.MemcClient.Set(item)
 				} else {
 					s.cc.Set(ctx, item)

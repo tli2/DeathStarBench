@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"os"
 	"sync"
 	"sync/atomic"
 
@@ -16,6 +17,19 @@ import (
 
 	"github.com/bradfitz/gomemcache/memcache"
 )
+
+var useCached bool
+
+func init() {
+	switch os.Getenv("CACHE_TYPE") {
+	case "cached":
+		useCached = true
+	case "memcached":
+		useCached = false
+	default:
+		log2.Fatalf("Unknown cache type %v", os.Getenv("CACHE_TYPE"))
+	}
+}
 
 const (
 	CACHE_CLNT_PORT = ":9999"
@@ -125,4 +139,8 @@ func dialClient(addr string) cached.CachedClient {
 	}
 	// Return the new client.
 	return cached.NewCachedClient(conn)
+}
+
+func UseCached() bool {
+	return useCached
 }

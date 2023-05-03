@@ -40,5 +40,8 @@ spec:
               cpu: 2900m
             limits:
               cpu: 4000m
+          envFrom:
+          - configMapRef:
+              name: env-config
       restartPolicy: Always
 status: {}
