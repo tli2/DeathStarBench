@@ -46,7 +46,7 @@ func (c *CacheClnt) Get(ctx context.Context, key string) ([]byte, bool) {
 	return res.Val, res.Ok
 }
 
-func (c *CacheClnt) Set(ctx context.Context, key string, b []byte) {
+func (c *CacheClnt) Set(ctx context.Context, key string, b []byte) bool {
 	n := c.key2shard(key)
 	req := cached.SetRequest{
 		Key: key,
@@ -56,6 +56,7 @@ func (c *CacheClnt) Set(ctx context.Context, key string, b []byte) {
 	if err != nil {
 		log.Fatalf("Error cacheclnt set: %v", err)
 	}
+	return res.Ok
 }
 
 type RegisterCacheRequest struct {
