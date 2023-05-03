@@ -1,6 +1,8 @@
 package cacheclnt
 
 import (
+	"context"
+	"hash/fnv"
 	"log"
 	"net"
 	"net/http"
@@ -32,15 +34,28 @@ func MakeCacheClnt() *CacheClnt {
 	return c
 }
 
-func (c *CacheClnt) Get(key string) ([]byte, bool) {
-	// TODO
-	log.Fatalf("Unimplemented")
-	return nil, false
+func (c *CacheClnt) Get(ctx, context.Context, key string) ([]byte, bool) {
+	n := c.key2shard(key)
+	req := cached.GetRequest{
+		Key: key,
+	}
+  res, err := c.ccs[n].Get(ctx, req)
+  if err != nil {
+    log.Fatalf("Error cacheclnt get: %v", err)
+  }
+	return res.Val, res.Ok
 }
 
 func (c *CacheClnt) Set(key string, b []byte) {
-	// TODO
-	log.Fatalf("Unimplemented")
+	n := c.key2shard(key)
+	req := cached.SetRequest{
+		Key: key,
+    Val: b,
+	}
+  res, err := c.ccs[n].Set(ctx, req)
+  if err != nil {
+    log.Fatalf("Error cacheclnt set: %v", err)
+  }
 }
 
 type RegisterCacheRequest struct {
@@ -79,6 +94,13 @@ func (c *CacheClnt) startRPCServer() {
 		log.Fatalf("Error Listen in Coordinator.registerServer: %v", err)
 	}
 	go http.Serve(l, nil)
+}
+
+func (c *CacheClnt) key2shard(key string) int {
+	h := fnv.New32a()
+	h.Write([]byte(key))
+	shard := int(h.Sum32()) % int(atomic.LoadInt32(&c.ncs))
+	return shard
 }
 
 func dialClient(addr string) cached.CachedClient {
