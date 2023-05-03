@@ -87,6 +87,7 @@ func (c *CacheClnt) RegisterCache(req *RegisterCacheRequest, rep *RegisterCacheR
 	c.ccs = ccs
 	// Atomically increase the number by which we mod when selecting a shard.
 	atomic.AddInt32(&c.ncs, 1)
+	log.Printf("Done registering new cache server %v", req.Addr)
 	return nil
 }
 
