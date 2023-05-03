@@ -42,7 +42,7 @@ const name = "srv-reservation"
 
 // Server implements the user service
 type Server struct {
-	ccs []cached.CachedClient
+	cc *cacheclnt.CacheClnt
 
 	Tracer       opentracing.Tracer
 	Port         int
@@ -63,6 +63,7 @@ func (s *Server) Run() error {
 
 	s.uuid = uuid.New().String()
 	s.MemcClient.MaxIdleConns = 8000
+	s.cc = cacheclnt.MakeCacheClnt()
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -357,13 +358,22 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 
 			// first check memc
 			memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
-			item, err := s.MemcClient.Get(memc_key)
+			var err error
+			var val []byte
+			// TODO: optionally run with memcached.
+			if false {
+				item, e := s.MemcClient.Get(memc_key)
+				err = e
+				val = item.Value
+			} else {
+				val, err = s.cc.Get(ctx, memc_key)
+			}
 
 			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
-				count, _ = strconv.Atoi(string(item.Value))
+				count, _ = strconv.Atoi(string(val))
 				log.Trace().Msgf("memcached hit %s = %d", memc_key, count)
 			} else if err == memcache.ErrCacheMiss {
 
@@ -393,7 +403,13 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				)
 
 				// update memcached
-				s.MemcClient.Set(&memcache.Item{Key: memc_key, Value: []byte(strconv.Itoa(count))})
+				val := []byte(strconv.Itoa(count))
+				// TODO: optionally run with memcached.
+				if false {
+					s.MemcClient.Set(ctx, &memcache.Item{Key: memc_key, Value: val})
+				} else {
+					s.cc.Set(memc_key, val)
+				}
 
 				setspan.Finish()
 			} else {
@@ -411,14 +427,23 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 			// check capacity
 			// check memc capacity
 			memc_cap_key := hotelId + "_cap"
-			item, err = s.MemcClient.Get(memc_cap_key)
 			hotel_cap := 0
+
+			var val2 []byte
+			// TODO: optionally run with memcached.
+			if false {
+				item, e = s.MemcClient.Get(memc_cap_key)
+				err = e
+				val2 = item.Value
+			} else {
+				val2, err = s.cc.Get(ctx, memc_cap_key)
+			}
 
 			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
-				hotel_cap, _ = strconv.Atoi(string(item.Value))
+				hotel_cap, _ = strconv.Atoi(string(val))
 				log.Trace().Msgf("memcached hit %s = %d", memc_cap_key, hotel_cap)
 			} else if err == memcache.ErrCacheMiss {
 				var num number
@@ -442,7 +467,14 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					memcComponentTag,
 				)
 				// update memcached
-				s.MemcClient.Set(&memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))})
+				val2 := []byte(strconv.Itoa(hotel_cap))
+				// TODO: optionally run with memcached.
+				if false {
+					s.MemcClient.Set(&memcache.Item{Key: memc_cap_key, Value: val2})
+				} else {
+					s.cc.Set(memc_cap_key, val2)
+				}
+
 				setspan.Finish()
 			} else {
 				log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_cap_key, err)
