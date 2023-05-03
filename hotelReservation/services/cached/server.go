@@ -144,7 +144,7 @@ func (s *Server) Shutdown() {
 }
 
 func (s *Server) registerWithServers() {
-	for _, svc := range []string{"reservation"} { //, "rate", "profile"} {
+	for _, svc := range []string{"reservation", "rate", "profile"} {
 		for {
 			c, err := rpc.DialHTTP("tcp", svc+cacheclnt.CACHE_CLNT_PORT)
 			if err != nil {
