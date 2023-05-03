@@ -166,6 +166,7 @@ func (s *Server) registerWithServers() {
 
 func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, error) {
 	log.Trace().Msgf("In cached get")
+	log2.Printf("Set")
 
 	b := key2bin(req.Key)
 
@@ -181,6 +182,7 @@ func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, er
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, error) {
 	log.Trace().Msgf("In cached get")
+	log2.Printf("Get")
 
 	res := &pb.GetResult{}
 
