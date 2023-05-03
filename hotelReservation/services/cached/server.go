@@ -144,15 +144,21 @@ func (s *Server) Shutdown() {
 
 func (s *Server) registerWithServers() {
 	for _, svc := range []string{"reservation"} { //, "rate", "profile"} {
-		c, err := rpc.DialHTTP("tcp", svc+cacheclnt.CACHE_CLNT_PORT)
-		if err != nil {
-			log2.Fatalf("Error dial server: %v", err)
-		}
-		req := &cacheclnt.RegisterCacheRequest{s.IpAddr}
-		res := &cacheclnt.RegisterCacheResponse{}
-		err = c.Call("CacheClnt.RegisterCache", req, res)
-		if err != nil {
-			log2.Fatalf("Error Call RegisterCache: %v", err)
+		for {
+			c, err := rpc.DialHTTP("tcp", svc+cacheclnt.CACHE_CLNT_PORT)
+			if err != nil {
+				log2.Printf("Error dial server (%v): %v", svc, err)
+				time.Sleep(1 * time.Second)
+				continue
+			}
+			log2.Printf("Success dial server (%v)", svc)
+			req := &cacheclnt.RegisterCacheRequest{s.IpAddr}
+			res := &cacheclnt.RegisterCacheResponse{}
+			err = c.Call("CacheClnt.RegisterCache", req, res)
+			if err != nil {
+				log2.Fatalf("Error Call RegisterCache: %v", err)
+			}
+			break
 		}
 	}
 }
