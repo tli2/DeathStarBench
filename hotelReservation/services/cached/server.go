@@ -87,9 +87,9 @@ func (s *Server) Run() error {
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
 		}),
-		grpc.UnaryInterceptor(
-			otgrpc.OpenTracingServerInterceptor(s.Tracer),
-		),
+		//		grpc.UnaryInterceptor(
+		//			otgrpc.OpenTracingServerInterceptor(s.Tracer),
+		//		),
 	}
 
 	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
