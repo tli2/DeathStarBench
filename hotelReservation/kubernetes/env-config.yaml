@@ -5,3 +5,4 @@ metadata:
   namespace: default
 data:
   CACHE_TYPE: "cached"
+  NOGC: "true"

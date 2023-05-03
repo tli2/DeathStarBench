@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	log2 "log"
 	"os"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -71,6 +72,10 @@ func main() {
 		IpAddr:   serv_ip,
 		Tracer:   tracer,
 		Registry: registry,
+	}
+
+	if os.Getenv("NOGC") == "true" {
+		debug.SetGCPercent(-1)
 	}
 
 	log.Info().Msg("Starting server...")
