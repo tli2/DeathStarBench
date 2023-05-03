@@ -37,6 +37,8 @@ const name = "srv-rate"
 
 // Server implements the rate service
 type Server struct {
+	cc *cacheclnt.CacheClnt
+
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
@@ -56,6 +58,7 @@ func (s *Server) Run() error {
 
 	s.uuid = uuid.New().String()
 	s.MemcClient.MaxIdleConns = 8000
+	s.cc = cacheclnt.MakeCacheClnt()
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
