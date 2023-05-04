@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	//	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	cacheclnt "github.com/harlow/go-micro-services/cacheclnt"
 	"github.com/harlow/go-micro-services/registry"
 	pb "github.com/harlow/go-micro-services/services/cached/proto"
@@ -74,11 +74,21 @@ func (s *Server) Run() error {
 
 	s.uuid = uuid.New().String()
 
+	// Register this cache with the servers that depend on it.
+	s.registerWithServers()
+
 	// opts := []grpc.ServerOption {
 	// 	grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 	// 		PermitWithoutStream: true,
 	// 	}),
 	// }
+
+	tracer, err := tracing.Init("cached", *jaegeraddr)
+	if err != nil {
+		log.Panic().Msgf("Got error while initializing jaeger agent: %v", err)
+	}
+	log.Info().Msg("Jaeger agent initialized")
+	s.Tracer = tracer
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -87,9 +97,9 @@ func (s *Server) Run() error {
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
 		}),
-		//		grpc.UnaryInterceptor(
-		//			otgrpc.OpenTracingServerInterceptor(s.Tracer),
-		//		),
+		grpc.UnaryInterceptor(
+			otgrpc.OpenTracingServerInterceptor(s.Tracer),
+		),
 	}
 
 	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
@@ -131,9 +141,6 @@ func (s *Server) Run() error {
 	//		return fmt.Errorf("failed register: %v", err)
 	//	}
 	//	log.Info().Msg("Successfully registered in consul")
-
-	// Register this cache with the servers that depend on it.
-	s.registerWithServers()
 
 	return srv.Serve(lis)
 }

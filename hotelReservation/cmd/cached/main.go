@@ -52,12 +52,6 @@ func main() {
 
 	log.Info().Msgf("Initializing jaeger agent [service name: %v | host: %v]...", "cached", *jaegeraddr)
 
-	//	tracer, err := tracing.Init("cached", *jaegeraddr)
-	//	if err != nil {
-	//		log.Panic().Msgf("Got error while initializing jaeger agent: %v", err)
-	//	}
-	//	log.Info().Msg("Jaeger agent initialized")
-
 	log.Info().Msgf("Initializing consul agent [host: %v]...", *consuladdr)
 	registry, err := registry.NewClient(*consuladdr)
 	if err != nil {
