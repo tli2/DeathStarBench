@@ -22,7 +22,6 @@ import (
 	"github.com/harlow/go-micro-services/registry"
 	pb "github.com/harlow/go-micro-services/services/cached/proto"
 	"github.com/harlow/go-micro-services/tls"
-	"github.com/harlow/go-micro-services/tracing"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -75,21 +74,11 @@ func (s *Server) Run() error {
 
 	s.uuid = uuid.New().String()
 
-	// Register this cache with the servers that depend on it.
-	s.registerWithServers()
-
 	// opts := []grpc.ServerOption {
 	// 	grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 	// 		PermitWithoutStream: true,
 	// 	}),
 	// }
-
-	tracer, err := tracing.Init("cached", "jaeger:6831")
-	if err != nil {
-		log.Panic().Msgf("Got error while initializing jaeger agent: %v", err)
-	}
-	log.Info().Msg("Jaeger agent initialized")
-	s.Tracer = tracer
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -98,9 +87,9 @@ func (s *Server) Run() error {
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
 		}),
-		grpc.UnaryInterceptor(
-			otgrpc.OpenTracingServerInterceptor(s.Tracer),
-		),
+		//		grpc.UnaryInterceptor(
+		//			otgrpc.OpenTracingServerInterceptor(s.Tracer),
+		//		),
 	}
 
 	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
@@ -142,6 +131,9 @@ func (s *Server) Run() error {
 	//		return fmt.Errorf("failed register: %v", err)
 	//	}
 	//	log.Info().Msg("Successfully registered in consul")
+
+	// Register this cache with the servers that depend on it.
+	s.registerWithServers()
 
 	return srv.Serve(lis)
 }
