@@ -22,6 +22,7 @@ import (
 	"github.com/harlow/go-micro-services/registry"
 	pb "github.com/harlow/go-micro-services/services/cached/proto"
 	"github.com/harlow/go-micro-services/tls"
+	"github.com/harlow/go-micro-services/tracing"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -83,7 +84,7 @@ func (s *Server) Run() error {
 	// 	}),
 	// }
 
-	tracer, err := tracing.Init("cached", *jaegeraddr)
+	tracer, err := tracing.Init("cached", "jaeger:6831")
 	if err != nil {
 		log.Panic().Msgf("Got error while initializing jaeger agent: %v", err)
 	}
