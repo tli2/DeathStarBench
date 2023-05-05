@@ -104,7 +104,7 @@ func (s *Server) Run() error {
 
 	http.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 	go func() {
-		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5000", nil))
+		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5555", nil))
 	}()
 
 	log.Trace().Msgf("In reservation s.IpAddr = %s, port = %d", s.IpAddr, s.Port)

@@ -32,7 +32,7 @@ spec:
           image: arielszekely/hotelreservation:latest
           name: hotel-reserv-reservation
           ports:
-            - containerPort: 5000
+            - containerPort: 5555
             - containerPort: 8087
             - containerPort: 9999
           resources:
