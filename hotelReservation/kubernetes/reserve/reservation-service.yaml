@@ -13,9 +13,9 @@ spec:
     - name: "8087"
       port: 8087
       targetPort: 8087
-    - name: "5000"
-      port: 5000
-      targetPort: 5000
+    - name: "5555"
+      port: 5555
+      targetPort: 5555
     - name: "9999"
       port: 9999 
       targetPort: 9999
