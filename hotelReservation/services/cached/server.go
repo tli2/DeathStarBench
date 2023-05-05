@@ -123,7 +123,7 @@ func (s *Server) Run() error {
 
 	http.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 	go func() {
-		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5000", nil))
+		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5555", nil))
 	}()
 
 	//	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)

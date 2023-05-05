@@ -34,6 +34,7 @@ spec:
           name: hotel-reserv-cached
           ports:
             - containerPort: 8091
+            - containerPort: 5555
           resources:
             requests:
               cpu: 1900m
