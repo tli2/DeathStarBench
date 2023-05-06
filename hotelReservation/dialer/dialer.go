@@ -42,6 +42,8 @@ func Dial(name string, opts ...DialOption) (*grpc.ClientConn, error) {
 			Timeout:             120 * time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithReadBufferSize(65536),
+		grpc.WithWriteBufferSize(65536),
 	}
 	if tlsopt := tls.GetDialOpt(); tlsopt != nil {
 		dialopts = append(dialopts, tlsopt)
