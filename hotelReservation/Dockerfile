@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM golang:1.17.3
+FROM golang
 
 # Install custom version of go with larger minimum stack size.
 RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
