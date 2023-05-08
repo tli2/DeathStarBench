@@ -13,6 +13,7 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
 
 RUN git config --global http.sslverify false
 WORKDIR /go/src/github.com/harlow/go-micro-services
+RUN /go/go-custom/bin/go mod init github.com/harlow/go-micro-services
 RUN /go/go-custom/bin/go get gopkg.in/mgo.v2
 RUN /go/go-custom/bin/go get github.com/bradfitz/gomemcache/memcache
 RUN /go/go-custom/bin/go get github.com/google/uuid
