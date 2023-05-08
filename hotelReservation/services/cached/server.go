@@ -165,8 +165,6 @@ func (s *Server) registerWithServers() {
 }
 
 func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, error) {
-	log.Trace().Msgf("In cached get")
-
 	b := key2bin(req.Key)
 
 	s.bins[b].Lock()
@@ -180,15 +178,21 @@ func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, er
 }
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, error) {
-	log.Trace().Msgf("In cached get")
-
+	s := time.Now()
 	res := &pb.GetResult{}
 
 	b := key2bin(req.Key)
 
+	s2 := time.Now()
 	s.bins[b].Lock()
 	defer s.bins[b].Unlock()
+	if time.Since(s2) > 2*time.Millisecond {
+		log2.Printf("Long lock acquisition get %v", time.Since(s2))
+	}
 
 	res.Val, res.Ok = s.bins[b].cache[req.Key]
+	if time.Since(s) > 2*time.Millisecond {
+		log2.Printf("Long cache get %v", time.Since(s))
+	}
 	return res, nil
 }
