@@ -24,7 +24,6 @@ import (
 	"github.com/harlow/go-micro-services/tls"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -178,7 +177,7 @@ func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, er
 }
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, error) {
-	s := time.Now()
+	st := time.Now()
 	res := &pb.GetResult{}
 
 	b := key2bin(req.Key)
@@ -191,8 +190,8 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, er
 	}
 
 	res.Val, res.Ok = s.bins[b].cache[req.Key]
-	if time.Since(s) > 2*time.Millisecond {
-		log2.Printf("Long cache get %v", time.Since(s))
+	if time.Since(st) > 2*time.Millisecond {
+		log2.Printf("Long cache get %v", time.Since(st))
 	}
 	return res, nil
 }
