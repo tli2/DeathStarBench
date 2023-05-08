@@ -15,7 +15,6 @@ RUN git config --global http.sslverify false
 WORKDIR /go/src/github.com/harlow/go-micro-services
 COPY go.* /go/src/github.com/harlow/go-micro-services
 RUN /go/go-custom/bin/go mod download
-RUN /go/go-custom/bin/go mod tidy
 RUN /go/go-custom/bin/go get gopkg.in/mgo.v2
 RUN /go/go-custom/bin/go get github.com/bradfitz/gomemcache/memcache
 RUN /go/go-custom/bin/go get github.com/google/uuid

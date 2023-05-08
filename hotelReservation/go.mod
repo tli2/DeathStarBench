@@ -23,3 +23,5 @@ require (
 	google.golang.org/genproto v0.0.0-20180306020942-df60624c1e9b
 	google.golang.org/grpc v1.10.0
 )
+
+require github.com/bradfitz/gomemcache v0.0.0-20230124162541-5f7a7d875746 // indirect
