@@ -1,6 +1,13 @@
 # syntax=docker/dockerfile:1-experimental
 
-FROM golang:1.17.3
+FROM golang 
+
+# Download an initial version of Go
+RUN wget "https://go.dev/dl/go1.20.4.linux-amd64.tar.gz" && \
+  tar -C /usr/local -xzf go1.20.4.linux-amd64.tar.gz
+
+# Set the PATH to include the new Go install.
+ENV PATH="${PATH}:/usr/local/go/bin"
 
 # Install custom version of go with larger minimum stack size.
 RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
@@ -13,11 +20,9 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
 
 RUN git config --global http.sslverify false
 WORKDIR /go/src/github.com/harlow/go-micro-services
-RUN go get gopkg.in/mgo.v2
-RUN go get github.com/bradfitz/gomemcache/memcache
-RUN go get github.com/google/uuid
-
+COPY go.* .
+RUN go mod download
 COPY . /go/src/github.com/harlow/go-micro-services
-RUN go mod vendor
+RUN /go/go-custom/bin/go mod vendor
 
 RUN --mount=type=cache,target=/root/.cache/go-build /go/go-custom/bin/go install -ldflags="-s -w" ./cmd/...
