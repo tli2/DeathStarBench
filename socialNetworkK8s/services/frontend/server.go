@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	geo "github.com/harlow/go-micro-services/services/geo/proto"
+	profile "github.com/harlow/go-micro-services/services/profile/proto"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -90,14 +91,13 @@ func (s *Server) echoHandler(w http.ResponseWriter, r *http.Request) {
 		defer s.p.TptTick(1.0)
 	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	ctx := r.Context()
 
 	log.Trace().Msg("starts echoHandler")
 
 	// grab locale from query params or default to en
 	msg := r.URL.Query().Get("msg")
 
-	log.Info().Msg("echoHandler msg %v", msg)
+	log.Info().Msg(fmt.Sprintf("echoHandler msg %v", msg))
 
 	res := map[string]interface{}{
 		"message": "Echo: " + msg,
