@@ -14,7 +14,7 @@ cd ../
 ROOT_FOLDER=$(pwd)
 $EXEC create --name mysocialnetworkbuilder --use
 
-for i in socialnetworkk8s #frontend geo profile rate recommendation reserve search user #uncomment to build multiple images
+for i in socialnetworkk8s
 do
   IMAGE=${i}
   echo Processing image ${IMAGE}
