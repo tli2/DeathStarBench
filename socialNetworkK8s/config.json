@@ -1,0 +1,7 @@
+{
+  "consulAddress": "consul:8500",
+  "jaegerAddress": "jaeger:6831",
+  "FrontendPort": "5000",
+  "GeoPort": "8083",
+  "GeoMongoAddress": "mongodb-geo:27017",
+}
