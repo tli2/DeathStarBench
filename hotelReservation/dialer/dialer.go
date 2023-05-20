@@ -61,16 +61,22 @@ func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.Clien
 		dialopts = append(dialopts, opt)
 	}
 
-	srvs, _, err := registry.Health().Service(name, "", true, &consul.QueryOptions{
-		WaitIndex: 0,
-	})
+	addr := name
+	if registry != nil {
+		srvs, _, err := registry.Health().Service(name, "", true, &consul.QueryOptions{
+			WaitIndex: 0,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial 1 %s: %v", name, err)
+		}
 
-	i := len(srvs) - 1
-	log.Printf("Dialing %v addr %v", name, net.JoinHostPort(srvs[i].Service.Address, strconv.Itoa(srvs[i].Service.Port)))
-	conn, err := grpc.Dial(net.JoinHostPort(srvs[i].Service.Address, strconv.Itoa(srvs[i].Service.Port)), dialopts...)
+		i := len(srvs) - 1
+		addr = net.JoinHostPort(srvs[i].Service.Address, strconv.Itoa(srvs[i].Service.Port))
+	}
+	log.Printf("Dialing %v addr %v", name, addr)
+	conn, err := grpc.Dial(addr, dialopts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial %s: %v", name, err)
 	}
-
 	return conn, nil
 }
