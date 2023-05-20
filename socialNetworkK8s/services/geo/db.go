@@ -1,20 +1,13 @@
-package main
+package geo
 
 import (
 	"strconv"
-
 	"github.com/rs/zerolog/log"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 )
 
-type point struct {
-	Pid  string  `bson:"hotelId"`
-	Plat float64 `bson:"lat"`
-	Plon float64 `bson:"lon"`
-}
-
-func initializeDatabase(url string) *mgo.Session {
+func InitializeDatabase(url string) *mgo.Session {
 	session, err := mgo.Dial(url)
 	if err != nil {
 		log.Panic().Msg(err.Error())

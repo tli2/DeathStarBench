@@ -19,9 +19,9 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-	"github.com/harlow/go-micro-services/registry"
-	pb "github.com/harlow/go-micro-services/services/geo/proto"
-	"github.com/harlow/go-micro-services/tls"
+	"socialnetworkk8/registry"
+	pb "socialnetworkk8/services/geo/proto"
+	"socialnetworkk8/tls"
 	"github.com/mit-pdos/go-geoindex"
 	opentracing "github.com/opentracing/opentracing-go"
 	"github.com/rs/zerolog"

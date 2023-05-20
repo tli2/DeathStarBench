@@ -7,11 +7,10 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/harlow/go-micro-services/registry"
-	"github.com/harlow/go-micro-services/services/geo"
-	"github.com/harlow/go-micro-services/tracing"
-	"github.com/harlow/go-micro-services/tune"
+	"socialnetworkk8/registry"
+	"socialnetworkk8/services/geo"
+	"socialnetworkk8/tracing"
+	"socialnetworkk8/tune"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -35,7 +34,7 @@ func main() {
 
 	log.Info().Msgf("Read database URL: %v", result["GeoMongoAddress"])
 	log.Info().Msg("Initializing DB connection...")
-	mongo_session := initializeDatabase(result["GeoMongoAddress"])
+	mongo_session := geo.InitializeDatabase(result["GeoMongoAddress"])
 	defer mongo_session.Close()
 	log.Info().Msg("Successfull")
 

@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 	"time"
-	"github.com/harlow/go-micro-services/services/user"
-	"github.com/harlow/go-micro-services/tune"
+	"socialnetworkk8/services/user"
+	"socialnetworkk8/tune"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

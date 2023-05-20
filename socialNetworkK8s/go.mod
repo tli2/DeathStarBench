@@ -1,4 +1,4 @@
-module github.com/harlow/go-micro-services
+module socialnetworkk8
 
 go 1.19
 

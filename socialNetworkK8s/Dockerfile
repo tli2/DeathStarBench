@@ -19,10 +19,8 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   ./all.bash
 
 RUN git config --global http.sslverify false
-WORKDIR /go/src/github.com/harlow/go-micro-services
+WORKDIR /go/src/socialnetworkk8
 COPY go.* .
-RUN go mod download
-COPY . /go/src/github.com/harlow/go-micro-services
-RUN /go/go-custom/bin/go mod vendor
+COPY . /go/src/socialnetworkk8
 
 RUN --mount=type=cache,target=/root/.cache/go-build /go/go-custom/bin/go install -ldflags="-s -w" ./cmd/...

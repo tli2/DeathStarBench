@@ -7,15 +7,15 @@ import (
 	"net/http/pprof"
 	"strconv"
 
-	geo "github.com/harlow/go-micro-services/services/geo/proto"
-	profile "github.com/harlow/go-micro-services/services/profile/proto"
+	geo "socialnetworkk8/services/geo/proto"
+	profile "socialnetworkk8/services/profile/proto"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/harlow/go-micro-services/dialer"
-	"github.com/harlow/go-micro-services/registry"
-	"github.com/harlow/go-micro-services/tls"
-	"github.com/harlow/go-micro-services/tracing"
+	"socialnetworkk8/dialer"
+	"socialnetworkk8/registry"
+	"socialnetworkk8/tls"
+	"socialnetworkk8/tracing"
 	"github.com/opentracing/opentracing-go"
 )
 

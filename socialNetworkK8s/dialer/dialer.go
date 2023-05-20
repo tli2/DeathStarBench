@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-	"github.com/harlow/go-micro-services/tls"
+	"socialnetworkk8/tls"
 	consul "github.com/hashicorp/consul/api"
 	opentracing "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"

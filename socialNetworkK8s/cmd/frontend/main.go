@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/harlow/go-micro-services/registry"
-	"github.com/harlow/go-micro-services/services/frontend"
-	"github.com/harlow/go-micro-services/tracing"
-	"github.com/harlow/go-micro-services/tune"
+	"socialnetworkk8/registry"
+	"socialnetworkk8/services/frontend"
+	"socialnetworkk8/tracing"
+	"socialnetworkk8/tune"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

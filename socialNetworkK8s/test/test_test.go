@@ -4,9 +4,9 @@ import (
 	"testing"
 	"fmt"
 	"github.com/stretchr/testify/assert"
-	"github.com/harlow/go-micro-services/dialer"
+	"socialnetworkk8/dialer"
 	"context"
-	geo "github.com/harlow/go-micro-services/services/geo/proto"
+	geo "socialnetworkk8/services/geo/proto"
 	"os/exec"
 	"time"
 )
