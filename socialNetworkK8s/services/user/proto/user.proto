@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "./services/user/proto";
+
+service User {
+  // Finds the hotels contained nearby the current lat/lon.
+  rpc Echo(UserRequest) returns (UserResponse);
+}
+
+message UserRequest {
+  string msg = 1;
+}
+
+message UserResponse {
+  string msg = 1;
+}

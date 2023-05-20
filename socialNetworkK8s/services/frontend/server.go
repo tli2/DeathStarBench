@@ -52,8 +52,8 @@ func (s *Server) Run() error {
 	mux.Handle("/", http.FileServer(http.Dir("services/frontend/static")))
 	mux.Handle("/echo", http.HandlerFunc(s.echoHandler))
 	mux.Handle("/geo", http.HandlerFunc(s.geoHandler))
-	mux.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 	mux.Handle("/saveresults", http.HandlerFunc(s.saveResultsHandler))
+	mux.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 	mux.Handle("/startrecording", http.HandlerFunc(s.startRecordingHandler))
 
 	log.Trace().Msg("frontend starts serving")
@@ -76,8 +76,8 @@ func (s *Server) Run() error {
 func (s *Server) initGeo(name string) error {
 	conn, err := dialer.Dial(
 		name,
+		s.Registry.Client,
 		dialer.WithTracer(s.Tracer),
-		dialer.WithBalancer(s.Registry.Client),
 	)
 	if err != nil {
 		return fmt.Errorf("dialer error: %v", err)
@@ -123,7 +123,7 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 	Lon, _ := strconv.ParseFloat(sLon, 32)
 	lon := float32(Lon)
 
-	_, err := s.geoClient.Nearby(ctx, &geo.Request{
+	geores, err := s.geoClient.Nearby(ctx, &geo.Request{
 		Lat: lat,
 		Lon: lon,
 	})
@@ -136,6 +136,7 @@ func (s *Server) geoHandler(w http.ResponseWriter, r *http.Request) {
 
 	res := map[string]interface{}{
 		"message": str,
+		"length": strconv.Itoa(len(geores.HotelIds)),
 	}
 
 	json.NewEncoder(w).Encode(res)

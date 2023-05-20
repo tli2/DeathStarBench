@@ -67,6 +67,7 @@ func (si *safeIndex) KNN(center *geoindex.GeoPoint) []geoindex.Point {
 
 // Server implements the geo service
 type Server struct {
+	pb.UnimplementedGeoServer
 	indexes []*safeIndex
 	uuid    string
 

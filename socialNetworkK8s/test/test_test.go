@@ -27,7 +27,7 @@ func TestGeo(t *testing.T) {
 	testPort := "9000"
 	fcmd, err := StartFowarding("geo", testPort, "8083")
 	assert.Nil(t, err)
-	conn, err := dialer.Dial("localhost:" + testPort)
+	conn, err := dialer.Dial("localhost:" + testPort, nil)
 	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
 	geoClient := geo.NewGeoClient(conn)
 	assert.NotNil(t, geoClient)

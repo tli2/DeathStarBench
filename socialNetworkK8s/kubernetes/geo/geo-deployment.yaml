@@ -28,7 +28,7 @@ spec:
       containers:
         - command:
             - geo
-          image: arielszekely/hotelreservation:latest
+          image: arielszekely/socialnetworkk8s:latest
           name: hotel-reserv-geo
           ports:
             - containerPort: 8083

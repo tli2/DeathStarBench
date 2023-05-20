@@ -29,7 +29,7 @@ spec:
       containers:
         - command:
             - frontend
-          image: arielszekely/hotelreservation:latest
+          image: arielszekely/socialnetworkk8s:latest
           name: hotel-reserv-frontend
           ports:
             - containerPort: 5000

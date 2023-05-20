@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+option go_package = "./services/geo/proto";
+
 package geo;
 
 service Geo {
