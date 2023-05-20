@@ -108,8 +108,9 @@ func (s *Server) Run() error {
 func (s *Server) initSearchClient(name string) error {
 	conn, err := dialer.Dial(
 		name,
+		s.Registry.Client,
 		dialer.WithTracer(s.Tracer),
-		dialer.WithBalancer(s.Registry.Client),
+		//		dialer.WithBalancer(s.Registry.Client),
 	)
 	if err != nil {
 		return fmt.Errorf("dialer error: %v", err)
@@ -121,8 +122,9 @@ func (s *Server) initSearchClient(name string) error {
 func (s *Server) initProfileClient(name string) error {
 	conn, err := dialer.Dial(
 		name,
+		s.Registry.Client,
 		dialer.WithTracer(s.Tracer),
-		dialer.WithBalancer(s.Registry.Client),
+		//		dialer.WithBalancer(s.Registry.Client),
 	)
 	if err != nil {
 		return fmt.Errorf("dialer error: %v", err)
@@ -134,8 +136,9 @@ func (s *Server) initProfileClient(name string) error {
 func (s *Server) initRecommendationClient(name string) error {
 	conn, err := dialer.Dial(
 		name,
+		s.Registry.Client,
 		dialer.WithTracer(s.Tracer),
-		dialer.WithBalancer(s.Registry.Client),
+		//		dialer.WithBalancer(s.Registry.Client),
 	)
 	if err != nil {
 		return fmt.Errorf("dialer error: %v", err)
@@ -147,8 +150,9 @@ func (s *Server) initRecommendationClient(name string) error {
 func (s *Server) initUserClient(name string) error {
 	conn, err := dialer.Dial(
 		name,
+		s.Registry.Client,
 		dialer.WithTracer(s.Tracer),
-		dialer.WithBalancer(s.Registry.Client),
+		//		dialer.WithBalancer(s.Registry.Client),
 	)
 	if err != nil {
 		return fmt.Errorf("dialer error: %v", err)
@@ -160,8 +164,9 @@ func (s *Server) initUserClient(name string) error {
 func (s *Server) initReservation(name string) error {
 	conn, err := dialer.Dial(
 		name,
+		s.Registry.Client,
 		dialer.WithTracer(s.Tracer),
-		dialer.WithBalancer(s.Registry.Client),
+		//		dialer.WithBalancer(s.Registry.Client),
 	)
 	if err != nil {
 		return fmt.Errorf("dialer error: %v", err)
@@ -173,8 +178,9 @@ func (s *Server) initReservation(name string) error {
 func (s *Server) initGeo(name string) error {
 	conn, err := dialer.Dial(
 		name,
+		s.Registry.Client,
 		dialer.WithTracer(s.Tracer),
-		dialer.WithBalancer(s.Registry.Client),
+		//		dialer.WithBalancer(s.Registry.Client),
 	)
 	if err != nil {
 		return fmt.Errorf("dialer error: %v", err)

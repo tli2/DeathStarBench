@@ -86,6 +86,9 @@ func (s *Server) Run() error {
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
 		}),
+		grpc.ReadBufferSize(65536),
+		grpc.WriteBufferSize(65536),
+		grpc.MaxConcurrentStreams(10000),
 		//		grpc.UnaryInterceptor(
 		//			otgrpc.OpenTracingServerInterceptor(s.Tracer),
 		//		),

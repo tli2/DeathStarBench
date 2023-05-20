@@ -133,7 +133,8 @@ func (c *CacheClnt) key2shard(key string) int {
 
 func dialClient(addr string) cached.CachedClient {
 	// Dial the new server
-	conn, err := dialer.Dial(addr)
+	// XXX fix
+	conn, err := dialer.Dial(addr, nil)
 	if err != nil {
 		log.Fatalf("Error dial cachesrv: %v", err)
 	}

@@ -126,10 +126,10 @@ func (s *Server) Shutdown() {
 // MakeReservation makes a reservation based on given information
 func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Result, error) {
 
-	var parentCtx opentracing.SpanContext
-	if parent := opentracing.SpanFromContext(ctx); parent != nil {
-		parentCtx = parent.Context()
-	}
+	//	var parentCtx opentracing.SpanContext
+	//	if parent := opentracing.SpanFromContext(ctx); parent != nil {
+	//		parentCtx = parent.Context()
+	//	}
 
 	res := new(pb.Result)
 	res.HotelId = make([]string, 0)
@@ -167,12 +167,12 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 		// first check memc
 		memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
 
-		getspan := s.Tracer.StartSpan(
-			"memcached/Get",
-			opentracing.ChildOf(parentCtx),
-			ext.SpanKindRPCClient,
-			memcComponentTag,
-		)
+		//		getspan := s.Tracer.StartSpan(
+		//			"memcached/Get",
+		//			opentracing.ChildOf(parentCtx),
+		//			ext.SpanKindRPCClient,
+		//			memcComponentTag,
+		//		)
 
 		var item *memcache.Item
 		var err error
@@ -181,7 +181,7 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 		} else {
 			item, err = s.cc.Get(ctx, memc_key)
 		}
-		getspan.Finish()
+		//		getspan.Finish()
 		if err == nil {
 			// memcached hit
 			count, _ = strconv.Atoi(string(item.Value))
@@ -189,17 +189,17 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			memc_date_num_map[memc_key] = count + int(req.RoomNumber)
 
 		} else if err == memcache.ErrCacheMiss {
-			findspan := s.Tracer.StartSpan(
-				"db/Find",
-				opentracing.ChildOf(parentCtx),
-				ext.SpanKindRPCClient,
-				dbComponentTag,
-			)
+			//			findspan := s.Tracer.StartSpan(
+			//				"db/Find",
+			//				opentracing.ChildOf(parentCtx),
+			//				ext.SpanKindRPCClient,
+			//				dbComponentTag,
+			//			)
 			// memcached miss
 			log.Trace().Msgf("memcached miss")
 			reserve := make([]reservation, 0)
 			err := c.Find(&bson.M{"hotelId": hotelId, "inDate": indate, "outDate": outdate}).All(&reserve)
-			findspan.Finish()
+			//			findspan.Finish()
 			if err != nil {
 				log2.Printf("Tried to find hotelId [%v] from date [%v] to date [%v], but got error %v", hotelId, indate, outdate, err)
 				log.Panic().Msgf("Tried to find hotelId [%v] from date [%v] to date [%v], but got error", hotelId, indate, outdate, err.Error())
@@ -216,12 +216,12 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_key, err)
 		}
 
-		getspan = s.Tracer.StartSpan(
-			"memcached/Get",
-			opentracing.ChildOf(parentCtx),
-			ext.SpanKindRPCClient,
-			memcComponentTag,
-		)
+		//		getspan = s.Tracer.StartSpan(
+		//			"memcached/Get",
+		//			opentracing.ChildOf(parentCtx),
+		//			ext.SpanKindRPCClient,
+		//			memcComponentTag,
+		//		)
 
 		// check capacity
 		// check memc capacity
@@ -232,7 +232,7 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 			item, err = s.cc.Get(ctx, memc_cap_key)
 		}
 
-		getspan.Finish()
+		//		getspan.Finish()
 		hotel_cap := 0
 		if err == nil {
 			// memcached hit
@@ -241,26 +241,26 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 		} else if err == memcache.ErrCacheMiss {
 			// memcached miss
 			var num number
-			findspan := s.Tracer.StartSpan(
-				"db/Find",
-				opentracing.ChildOf(parentCtx),
-				ext.SpanKindRPCClient,
-				dbComponentTag,
-			)
+			//			findspan := s.Tracer.StartSpan(
+			//				"db/Find",
+			//				opentracing.ChildOf(parentCtx),
+			//				ext.SpanKindRPCClient,
+			//				dbComponentTag,
+			//			)
 			err = c1.Find(&bson.M{"hotelId": hotelId}).One(&num)
-			findspan.Finish()
+			//			findspan.Finish()
 			if err != nil {
 				log2.Printf("Tried to find hotelId [%v], but got error", hotelId, err.Error())
 				log.Panic().Msgf("Tried to find hotelId [%v], but got error", hotelId, err.Error())
 			}
 			hotel_cap = int(num.Number)
 
-			setspan := s.Tracer.StartSpan(
-				"memcached/Set",
-				opentracing.ChildOf(parentCtx),
-				ext.SpanKindRPCClient,
-				memcComponentTag,
-			)
+			//			setspan := s.Tracer.StartSpan(
+			//				"memcached/Set",
+			//				opentracing.ChildOf(parentCtx),
+			//				ext.SpanKindRPCClient,
+			//				memcComponentTag,
+			//			)
 			// write to memcache
 			item := &memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))}
 			if !cacheclnt.UseCached() {
@@ -269,7 +269,7 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 				s.cc.Set(ctx, item)
 			}
 
-			setspan.Finish()
+			//			setspan.Finish()
 		} else {
 			log2.Printf("Tried to get memc_cap_key [%v], but got memmcached error = %s", memc_cap_key, err)
 			log.Panic().Msgf("Tried to get memc_cap_key [%v], but got memmcached error = %s", memc_cap_key, err)
@@ -283,19 +283,19 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 
 	// only update reservation number cache after check succeeds
 	for key, val := range memc_date_num_map {
-		setspan := s.Tracer.StartSpan(
-			"memcached/Set",
-			opentracing.ChildOf(parentCtx),
-			ext.SpanKindRPCClient,
-			memcComponentTag,
-		)
+		//		setspan := s.Tracer.StartSpan(
+		//			"memcached/Set",
+		//			opentracing.ChildOf(parentCtx),
+		//			ext.SpanKindRPCClient,
+		//			memcComponentTag,
+		//		)
 		item := &memcache.Item{Key: key, Value: []byte(strconv.Itoa(val))}
 		if !cacheclnt.UseCached() {
 			s.MemcClient.Set(item)
 		} else {
 			s.cc.Set(ctx, item)
 		}
-		setspan.Finish()
+		//		setspan.Finish()
 	}
 
 	inDate, _ = time.Parse(
@@ -307,19 +307,19 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 	for inDate.Before(outDate) {
 		inDate = inDate.AddDate(0, 0, 1)
 		outdate := inDate.String()[0:10]
-		insertspan := s.Tracer.StartSpan(
-			"db/Insert",
-			opentracing.ChildOf(parentCtx),
-			ext.SpanKindRPCClient,
-			dbComponentTag,
-		)
+		//		insertspan := s.Tracer.StartSpan(
+		//			"db/Insert",
+		//			opentracing.ChildOf(parentCtx),
+		//			ext.SpanKindRPCClient,
+		//			dbComponentTag,
+		//		)
 		err := c.Insert(&reservation{
 			HotelId:      hotelId,
 			CustomerName: req.CustomerName,
 			InDate:       indate,
 			OutDate:      outdate,
 			Number:       int(req.RoomNumber)})
-		insertspan.Finish()
+		//		insertspan.Finish()
 		if err != nil {
 			log.Panic().Msgf("Tried to insert hotel [hotelId %v], but got error", hotelId, err.Error())
 		}
@@ -333,10 +333,10 @@ func (s *Server) MakeReservation(ctx context.Context, req *pb.Request) (*pb.Resu
 
 // CheckAvailability checks if given information is available
 func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Result, error) {
-	var parentCtx opentracing.SpanContext
-	if parent := opentracing.SpanFromContext(ctx); parent != nil {
-		parentCtx = parent.Context()
-	}
+	//	var parentCtx opentracing.SpanContext
+	//	if parent := opentracing.SpanFromContext(ctx); parent != nil {
+	//		parentCtx = parent.Context()
+	//	}
 
 	res := new(pb.Result)
 	res.HotelId = make([]string, 0)
@@ -371,12 +371,12 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 			log.Trace().Msgf("reservation check date %s", inDate.String()[0:10])
 			outdate := inDate.String()[0:10]
 
-			getspan := s.Tracer.StartSpan(
-				"memcached/Get",
-				opentracing.ChildOf(parentCtx),
-				ext.SpanKindRPCClient,
-				memcComponentTag,
-			)
+			//			getspan := s.Tracer.StartSpan(
+			//				"memcached/Get",
+			//				opentracing.ChildOf(parentCtx),
+			//				ext.SpanKindRPCClient,
+			//				memcComponentTag,
+			//			)
 
 			// first check memc
 			memc_key := hotelId + "_" + inDate.String()[0:10] + "_" + outdate
@@ -388,7 +388,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				item, err = s.cc.Get(ctx, memc_key)
 			}
 
-			getspan.Finish()
+			//			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
@@ -396,16 +396,16 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				log.Trace().Msgf("memcached hit %s = %d", memc_key, count)
 			} else if err == memcache.ErrCacheMiss {
 
-				findspan := s.Tracer.StartSpan(
-					"db/Find",
-					opentracing.ChildOf(parentCtx),
-					ext.SpanKindRPCClient,
-					dbComponentTag,
-				)
+				//				findspan := s.Tracer.StartSpan(
+				//					"db/Find",
+				//					opentracing.ChildOf(parentCtx),
+				//					ext.SpanKindRPCClient,
+				//					dbComponentTag,
+				//				)
 				// memcached miss
 				reserve := make([]reservation, 0)
 				err := c.Find(&bson.M{"hotelId": hotelId, "inDate": indate, "outDate": outdate}).All(&reserve)
-				findspan.Finish()
+				//				findspan.Finish()
 				if err != nil {
 					log.Panic().Msgf("Tried to find hotelId [%v] from date [%v] to date [%v], but got error", hotelId, indate, outdate, err.Error())
 				}
@@ -414,12 +414,12 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					count += r.Number
 				}
 
-				setspan := s.Tracer.StartSpan(
-					"memcached/Get",
-					opentracing.ChildOf(parentCtx),
-					ext.SpanKindRPCClient,
-					memcComponentTag,
-				)
+				//				setspan := s.Tracer.StartSpan(
+				//					"memcached/Get",
+				//					opentracing.ChildOf(parentCtx),
+				//					ext.SpanKindRPCClient,
+				//					memcComponentTag,
+				//				)
 
 				// update memcached
 				item := &memcache.Item{Key: memc_key, Value: []byte(strconv.Itoa(count))}
@@ -429,18 +429,18 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					s.cc.Set(ctx, item)
 				}
 
-				setspan.Finish()
+				//				setspan.Finish()
 			} else {
 				log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_key, err)
 
 			}
 
-			getspan = s.Tracer.StartSpan(
-				"memcached/Get",
-				opentracing.ChildOf(parentCtx),
-				ext.SpanKindRPCClient,
-				memcComponentTag,
-			)
+			//			getspan = s.Tracer.StartSpan(
+			//				"memcached/Get",
+			//				opentracing.ChildOf(parentCtx),
+			//				ext.SpanKindRPCClient,
+			//				memcComponentTag,
+			//			)
 
 			// check capacity
 			// check memc capacity
@@ -453,7 +453,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 
 			hotel_cap := 0
 
-			getspan.Finish()
+			//			getspan.Finish()
 
 			if err == nil {
 				// memcached hit
@@ -461,25 +461,25 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 				log.Trace().Msgf("memcached hit %s = %d", memc_cap_key, hotel_cap)
 			} else if err == memcache.ErrCacheMiss {
 				var num number
-				findspan := s.Tracer.StartSpan(
-					"db/Find",
-					opentracing.ChildOf(parentCtx),
-					ext.SpanKindRPCClient,
-					dbComponentTag,
-				)
+				//				findspan := s.Tracer.StartSpan(
+				//					"db/Find",
+				//					opentracing.ChildOf(parentCtx),
+				//					ext.SpanKindRPCClient,
+				//					dbComponentTag,
+				//				)
 				err = c1.Find(&bson.M{"hotelId": hotelId}).One(&num)
-				findspan.Finish()
+				//				findspan.Finish()
 				if err != nil {
 					log.Panic().Msgf("Tried to find hotelId [%v], but got error", hotelId, err.Error())
 				}
 				hotel_cap = int(num.Number)
 
-				setspan := s.Tracer.StartSpan(
-					"memcached/Get",
-					opentracing.ChildOf(parentCtx),
-					ext.SpanKindRPCClient,
-					memcComponentTag,
-				)
+				//				setspan := s.Tracer.StartSpan(
+				//					"memcached/Get",
+				//					opentracing.ChildOf(parentCtx),
+				//					ext.SpanKindRPCClient,
+				//					memcComponentTag,
+				//				)
 				item := &memcache.Item{Key: memc_cap_key, Value: []byte(strconv.Itoa(hotel_cap))}
 				if !cacheclnt.UseCached() {
 					s.MemcClient.Set(item)
@@ -487,7 +487,7 @@ func (s *Server) CheckAvailability(ctx context.Context, req *pb.Request) (*pb.Re
 					s.cc.Set(ctx, item)
 				}
 				// update memcached
-				setspan.Finish()
+				//				setspan.Finish()
 			} else {
 				log.Panic().Msgf("Tried to get memc_key [%v], but got memmcached error = %s", memc_cap_key, err)
 			}
