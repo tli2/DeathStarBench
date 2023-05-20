@@ -30,6 +30,7 @@ const name = "srv-search"
 
 // Server implments the search service
 type Server struct {
+	pb.UnimplementedSearchServer
 	geoClient  geo.GeoClient
 	rateClient rate.RateClient
 

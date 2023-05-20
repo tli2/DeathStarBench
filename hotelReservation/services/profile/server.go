@@ -34,6 +34,7 @@ const name = "srv-profile"
 
 // Server implements the profile service
 type Server struct {
+	pb.UnimplementedProfileServer
 	cc *cacheclnt.CacheClnt
 
 	Tracer       opentracing.Tracer

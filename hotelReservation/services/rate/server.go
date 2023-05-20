@@ -37,6 +37,7 @@ const name = "srv-rate"
 
 // Server implements the rate service
 type Server struct {
+	pb.UnimplementedRateServer
 	cc *cacheclnt.CacheClnt
 
 	Tracer       opentracing.Tracer

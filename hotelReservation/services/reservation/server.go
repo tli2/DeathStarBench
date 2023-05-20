@@ -41,6 +41,7 @@ const name = "srv-reservation"
 
 // Server implements the user service
 type Server struct {
+	pb.UnimplementedReservationServer
 	cc *cacheclnt.CacheClnt
 
 	Tracer       opentracing.Tracer

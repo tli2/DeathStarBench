@@ -56,6 +56,7 @@ type Server struct {
 	Tracer   opentracing.Tracer
 	Port     int
 	IpAddr   string
+	pb.UnimplementedCachedServer
 }
 
 // Run starts the server

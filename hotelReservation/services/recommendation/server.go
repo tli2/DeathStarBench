@@ -32,6 +32,7 @@ const name = "srv-recommendation"
 
 // Server implements the recommendation service
 type Server struct {
+	pb.UnimplementedRecommendationServer
 	hotels       map[string]Hotel
 	Tracer       opentracing.Tracer
 	Port         int

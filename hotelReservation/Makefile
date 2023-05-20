@@ -2,7 +2,8 @@
 
 proto:
 	for f in services/**/proto/**.proto; do \
-		/home/arielck/workspace/projects/research/oldproto/bin/protoc --go_out=plugins=grpc:. $$f; \
+    protoc -I=. --go_out=. $$f; \
+    protoc -I=. --go-grpc_out=. $$f; \
 		echo compiled: $$f; \
 	done
 
