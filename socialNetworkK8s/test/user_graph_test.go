@@ -46,6 +46,6 @@ func TestUser(t *testing.T) {
 	assert.NotNil(t, userClient)
 	res, err := userClient.Echo(context.Background(), &user.UserRequest{Msg: "Hello User!"})
 	assert.Nil(t, err)
-	assert.Equal(t, "Hello User", res.Msg)
+	assert.Equal(t, "Hello User!", res.Msg)
 	assert.Nil(t, fcmd.Process.Kill())
 }

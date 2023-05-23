@@ -2,6 +2,7 @@
   "consulAddress": "consul:8500",
   "jaegerAddress": "jaeger:6831",
   "FrontendPort": "5000",
+  "CachedPort": "8091",
   "GeoPort": "8083",
   "UserPort": "8084",
   "MongoAddress": "mongodb-sn:27017"
