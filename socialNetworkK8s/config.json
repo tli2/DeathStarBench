@@ -4,5 +4,5 @@
   "FrontendPort": "5000",
   "GeoPort": "8083",
   "UserPort": "8084",
-  "GeoMongoAddress": "mongodb-geo:27017"
+  "MongoAddress": "mongodb-sn:27017"
 }

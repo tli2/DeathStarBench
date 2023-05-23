@@ -32,9 +32,9 @@ func main() {
 	var result map[string]string
 	json.Unmarshal([]byte(byteValue), &result)
 
-	log.Info().Msgf("Read database URL: %v", result["GeoMongoAddress"])
+	log.Info().Msgf("Read database URL: %v", result["MongoAddress"])
 	log.Info().Msg("Initializing DB connection...")
-	mongo_session := geo.InitializeDatabase(result["GeoMongoAddress"])
+	mongo_session := geo.InitializeDatabase(result["MongoAddress"])
 	defer mongo_session.Close()
 	log.Info().Msg("Successfull")
 

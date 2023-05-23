@@ -84,7 +84,7 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	zerolog.SetGlobalLevel(zerolog.Disabled)
+	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 
 	if len(s.indexes) == 0 {
 		s.indexes = make([]*safeIndex, 0, N_INDEX)
@@ -126,21 +126,6 @@ func (s *Server) Run() error {
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
-
-	// register the service
-	// jsonFile, err := os.Open("config.json")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// defer jsonFile.Close()
-
-	// byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	// var result map[string]string
-	// json.Unmarshal([]byte(byteValue), &result)
-
-	// fmt.Printf("geo server ip = %s, port = %d\n", s.IpAddr, s.Port)
 
 	http.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 	go func() {
@@ -196,12 +181,6 @@ func (s *Server) getNearbyPoints(ctx context.Context, lat, lon float64) []geoind
 
 // newGeoIndex returns a geo index with points loaded
 func newGeoIndex(session *mgo.Session) *geoindex.ClusteringIndex {
-	// session, err := mgo.Dial("mongodb-geo")
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer session.Close()
-
 	log.Trace().Msg("new geo newGeoIndex")
 
 	s := session.Copy()

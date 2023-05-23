@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - image: jaegertracing/all-in-one:latest
-          name: hotel-reserv-jaeger
+          name: socialnetwork-jaeger
           ports:
             - containerPort: 14269
             - containerPort: 5778

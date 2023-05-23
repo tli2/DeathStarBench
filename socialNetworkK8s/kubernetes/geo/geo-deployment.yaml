@@ -29,7 +29,7 @@ spec:
         - command:
             - geo
           image: arielszekely/socialnetworkk8s:latest
-          name: hotel-reserv-geo
+          name: socialnetwork-geo
           ports:
             - containerPort: 8083
             - containerPort: 5000

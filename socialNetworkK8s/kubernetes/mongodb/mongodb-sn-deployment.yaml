@@ -6,13 +6,13 @@ metadata:
     kompose.version: 1.22.0 (955b78124)
   creationTimestamp: null
   labels:
-    io.kompose.service: mongodb-geo
-  name: mongodb-geo
+    io.kompose.service: mongodb-sn
+  name: mongodb-sn
 spec:
   replicas: 1
   selector:
     matchLabels:
-      io.kompose.service: mongodb-geo
+      io.kompose.service: mongodb-sn
   strategy:
     type: Recreate
   template:
@@ -24,11 +24,11 @@ spec:
         sidecar.istio.io/statsInclusionRegexps: http.*
       creationTimestamp: null
       labels:
-        io.kompose.service: mongodb-geo
+        io.kompose.service: mongodb-sn
     spec:
       containers:
         - image: mongo:4.4.6
-          name: hotel-reserv-geo-mongo
+          name: socialnetwork-mongo
           ports:
             - containerPort: 27017
           resources:
@@ -43,5 +43,5 @@ spec:
       volumes:
         - name: geo
           persistentVolumeClaim:
-            claimName: geo-pvc
+            claimName: mongo-pvc
 status: {}

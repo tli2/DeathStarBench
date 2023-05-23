@@ -30,7 +30,7 @@ spec:
         - command:
             - frontend
           image: arielszekely/socialnetworkk8s:latest
-          name: hotel-reserv-frontend
+          name: socialnetwork-frontend
           ports:
             - containerPort: 5000
           resources:
