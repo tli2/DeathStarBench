@@ -34,6 +34,8 @@ const (
 	name = "srv-cached"
 )
 
+var CACHE_SERVICES = []string{"user", "rate", "profile"}
+
 func key2bin(key string) uint32 {
 	h := fnv.New32a()
 	h.Write([]byte(key))
@@ -73,13 +75,6 @@ func (s *Server) Run() error {
 	}
 
 	s.uuid = uuid.New().String()
-
-	// opts := []grpc.ServerOption {
-	// 	grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
-	// 		PermitWithoutStream: true,
-	// 	}),
-	// }
-
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
@@ -90,11 +85,7 @@ func (s *Server) Run() error {
 		grpc.ReadBufferSize(65536),
 		grpc.WriteBufferSize(65536),
 		grpc.MaxConcurrentStreams(10000),
-		//		grpc.UnaryInterceptor(
-		//			otgrpc.OpenTracingServerInterceptor(s.Tracer),
-		//		),
 	}
-
 	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
 		opts = append(opts, tlsopt)
 	}
@@ -109,35 +100,11 @@ func (s *Server) Run() error {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
 
-	// register the service
-	// jsonFile, err := os.Open("config.json")
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// defer jsonFile.Close()
-
-	// byteValue, _ := ioutil.ReadAll(jsonFile)
-
-	// var result map[string]string
-	// json.Unmarshal([]byte(byteValue), &result)
-
-	// fmt.Printf("geo server ip = %s, port = %d\n", s.IpAddr, s.Port)
-
 	http.Handle("/pprof/cpu", http.HandlerFunc(pprof.Profile))
 	go func() {
 		log2.Fatalf("Error ListenAndServe: %v", http.ListenAndServe(":5555", nil))
 	}()
-
-	//	err = s.Registry.Register(name, s.uuid, s.IpAddr, s.Port)
-	//	if err != nil {
-	//		return fmt.Errorf("failed register: %v", err)
-	//	}
-	//	log.Info().Msg("Successfully registered in consul")
-
-	// Register this cache with the servers that depend on it.
 	s.registerWithServers()
-
 	return srv.Serve(lis)
 }
 
@@ -147,7 +114,7 @@ func (s *Server) Shutdown() {
 }
 
 func (s *Server) registerWithServers() {
-	for _, svc := range []string{"reservation", "rate", "profile"} {
+	for _, svc := range CACHE_SERVICES {
 		for {
 			c, err := rpc.DialHTTP("tcp", svc+cacheclnt.CACHE_CLNT_PORT)
 			if err != nil {

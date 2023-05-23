@@ -16,6 +16,9 @@ spec:
     - name: "5000"
       port: 5000
       targetPort: 5000
+    - name: "9999"
+      port: 9999
+      targetPort: 9999
   selector:
     io.kompose.service: user
 status:

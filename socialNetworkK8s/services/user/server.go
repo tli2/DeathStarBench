@@ -17,7 +17,8 @@ import (
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"socialnetworkk8/registry"
 	"socialnetworkk8/tune"
-	pb "socialnetworkk8/services/user/proto"
+	"socialnetworkk8/services/user/proto"
+	"socialnetworkk8/services/cacheclnt"
 	"socialnetworkk8/tls"
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
@@ -33,8 +34,9 @@ const (
 
 // Server implements the user service
 type UserSrv struct {
-	pb.UnimplementedUserServer
-	uuid    string
+	proto.UnimplementedUserServer
+	uuid   		 string
+	cachec       *cacheclnt.CacheClnt
 	Registry     *registry.Client
 	Tracer       opentracing.Tracer
 	Port         int
@@ -83,11 +85,13 @@ func MakeUserSrv() *UserSrv {
 		log.Panic().Msgf("Got error while initializing consul agent: %v", err)
 	}
 	log.Info().Msg("Consul agent initialized")
+	cachec := cacheclnt.MakeCacheClnt() 
 	return &UserSrv{
 		Port:         serv_port,
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
+		cachec:       cachec,
 	}
 }
 
@@ -117,7 +121,7 @@ func (usrv *UserSrv) Run() error {
 
 	grpcSrv := grpc.NewServer(opts...)
 
-	pb.RegisterUserServer(grpcSrv, usrv)
+	proto.RegisterUserServer(grpcSrv, usrv)
 
 	// listener
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", usrv.Port))
@@ -143,7 +147,7 @@ func (usrv *UserSrv) Shutdown() {
 	usrv.Registry.Deregister(usrv.uuid)
 }
 
-func (usrv *UserSrv) Echo(ctx context.Context, req *pb.UserRequest) (*pb.UserResponse, error) {
+func (usrv *UserSrv) Echo(ctx context.Context, req *proto.UserRequest) (*proto.UserResponse, error) {
 	log.Info().Msgf("In User Echo")
-	return &pb.UserResponse{Msg: req.Msg}, nil
+	return &proto.UserResponse{Msg: req.Msg}, nil
 }
