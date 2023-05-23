@@ -84,7 +84,7 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	if len(s.indexes) == 0 {
 		s.indexes = make([]*safeIndex, 0, N_INDEX)
