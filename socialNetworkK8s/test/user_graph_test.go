@@ -7,7 +7,7 @@ import (
 	"socialnetworkk8/dialer"
 	"context"
 	geo "socialnetworkk8/services/geo/proto"
-	user "socialnetworkk8/services/user/proto"
+	userpb "socialnetworkk8/services/user/proto"
 	"os/exec"
 	"time"
 )
@@ -37,15 +37,22 @@ func TestGeo(t *testing.T) {
 
 
 func TestUser(t *testing.T) {
+	// start k8s port forwarding and set up client connection.
 	testPort := "9000"
 	fcmd, err := StartFowarding("user", testPort, "8084")
 	assert.Nil(t, err)
 	conn, err := dialer.Dial("localhost:" + testPort, nil)
 	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
-	userClient := user.NewUserClient(conn)
+	userClient := userpb.NewUserClient(conn)
 	assert.NotNil(t, userClient)
-	res, err := userClient.Echo(context.Background(), &user.UserRequest{Msg: "Hello User!"})
+
+	// check user
+	arg_check := &userpb.CheckUserRequest{Usernames: []string{"test_user"}}
+	res_check, err := userClient.CheckUser(context.Background(), arg_check)
 	assert.Nil(t, err)
-	assert.Equal(t, "Hello User!", res.Msg)
+	assert.Equal(t, "No", res_check.Ok)
+	assert.Equal(t, int64(-1), res_check.Userids[0])
+
+	// Stop fowarding
 	assert.Nil(t, fcmd.Process.Kill())
 }

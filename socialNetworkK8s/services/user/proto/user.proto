@@ -5,14 +5,33 @@ package user;
 option go_package = "./services/user/proto";
 
 service User {
-  // Finds the hotels contained nearby the current lat/lon.
-  rpc Echo(UserRequest) returns (UserResponse);
+	rpc CheckUser(CheckUserRequest) returns (CheckUserResponse);
+	rpc RegisterUser(RegisterUserRequest) returns (UserResponse);
+	rpc Login(LoginRequest) returns (UserResponse);
 }
 
-message UserRequest {
-  string msg = 1;
+message CheckUserRequest {
+	repeated string usernames = 1;
+}
+
+message CheckUserResponse {
+	string         ok = 1;
+	repeated int64 userids = 2;
+}
+
+message RegisterUserRequest {
+	string username = 1;
+	string password = 2;
+	string firstname = 3;
+	string lastname = 4;
+}
+
+message LoginRequest {
+	string username = 1;
+	string password = 2;
 }
 
 message UserResponse {
-  string msg = 1;
+	string ok = 1;
+	int64 userid = 2;
 }

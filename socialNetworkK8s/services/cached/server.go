@@ -34,7 +34,7 @@ const (
 	name = "srv-cached"
 )
 
-var CACHE_SERVICES = []string{"user", "rate", "profile"}
+var CACHE_SERVICES = []string{"user"}
 
 func key2bin(key string) uint32 {
 	h := fnv.New32a()
