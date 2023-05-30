@@ -66,6 +66,16 @@ func (c *CacheClnt) Set(ctx context.Context, item *memcache.Item) bool {
 	return res.Ok
 }
 
+func (c *CacheClnt) Delete(ctx context.Context, key string) bool {
+	n := c.key2shard(key)
+	req := cached.DeleteRequest{Key: key}
+	res, err := c.ccs[n].Delete(ctx, &req)
+	if err != nil {
+		log.Fatalf("Error cacheclnt delete: %v", err)
+	}
+	return res.Ok
+}
+
 type RegisterCacheRequest struct {
 	Addr string
 }

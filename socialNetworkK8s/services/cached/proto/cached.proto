@@ -5,6 +5,7 @@ option go_package = "./services/cached/proto";
 service Cached {
   rpc Get(GetRequest) returns (GetResult);
   rpc Set(SetRequest) returns (SetResult);
+  rpc Delete(DeleteRequest) returns (DeleteResult);
 }
 
 message GetRequest {
@@ -22,5 +23,13 @@ message SetRequest {
 }
 
 message SetResult {
+  bool ok = 1;
+}
+
+message DeleteRequest {
+  string key = 1;
+}
+
+message DeleteResult {
   bool ok = 1;
 }

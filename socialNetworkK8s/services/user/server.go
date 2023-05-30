@@ -105,11 +105,6 @@ func MakeUserSrv() *UserSrv {
 		log.Panic().Msg(err.Error())
 	}
 	collection := session.DB("socialnetwork").C("user")
-	/*
-	if err = collection.DropCollection(); err != nil {
-		log.Fatal().Msg(err.Error())
-	}
-	*/
 	collection.EnsureIndexKey("userid")
 
 	log.Info().Msg("New session successfull...")

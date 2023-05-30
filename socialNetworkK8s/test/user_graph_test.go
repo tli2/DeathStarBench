@@ -8,6 +8,7 @@ import (
 	"context"
 	geo "socialnetworkk8/services/geo/proto"
 	userpb "socialnetworkk8/services/user/proto"
+	graphpb "socialnetworkk8/services/graph/proto"
 )
 
 func TestGeo(t *testing.T) {
@@ -76,4 +77,52 @@ func TestUser(t *testing.T) {
 
 	// Stop fowarding
 	assert.Nil(t, fcmd.Process.Kill())
+}
+
+func TestGraph(t *testing.T) {
+	// start k8s port forwarding and set up client connection.
+	testPort := "9000"
+	fcmd, err := StartFowarding("graph", testPort, "8085")
+	assert.Nil(t, err)
+	conn, err := dialer.Dial("localhost:" + testPort, nil)
+	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
+	graphClient := graphpb.NewGraphClient(conn)
+	assert.NotNil(t, graphClient)
+
+	// get follower and followee list
+	arg_get_flwER := graphpb.GetFollowersRequest{Followeeid: int64(0)}
+	res_get, err := graphClient.GetFollowers(context.Background(), &arg_get_flwER)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_get.Ok)
+	assert.Equal(t, 0, len(res_get.Userids)) // user 0 has no follower
+	
+	arg_get_flwEE := graphpb.GetFolloweesRequest{Followerid: int64(1)}
+	res_get, err = graphClient.GetFollowees(context.Background(), &arg_get_flwEE)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_get.Ok)
+	assert.Equal(t, 0, len(res_get.Userids))
+	//assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 has one followee user 2
+
+	// Follow
+	arg_follow := graphpb.FollowRequest{Followerid: int64(1), Followeeid: int64(0)}
+	res_follow, err := graphClient.Follow(context.Background(), &arg_follow)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_follow.Ok)
+
+	res_get, err = graphClient.GetFollowers(context.Background(), &arg_get_flwER)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_get.Ok)
+	assert.Equal(t, 1, len(res_get.Userids))
+	assert.Equal(t, int64(1), res_get.Userids[0]) // user 0 has one follower user 1
+
+	res_get, err = graphClient.GetFollowees(context.Background(), &arg_get_flwEE)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_get.Ok)
+	assert.Equal(t, 1, len(res_get.Userids))
+	assert.Equal(t, int64(0), res_get.Userids[0]) // user 1 has two followees user 0 & 2
+	//assert.Equal(t, int64(2), res_get.Userids[1]) // user 1 has two followees user 0 & 2
+
+	// Stop fowarding
+	assert.Nil(t, fcmd.Process.Kill())
+
 }

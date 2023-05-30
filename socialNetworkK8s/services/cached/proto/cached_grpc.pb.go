@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Cached_Get_FullMethodName = "/Cached/Get"
-	Cached_Set_FullMethodName = "/Cached/Set"
+	Cached_Get_FullMethodName    = "/Cached/Get"
+	Cached_Set_FullMethodName    = "/Cached/Set"
+	Cached_Delete_FullMethodName = "/Cached/Delete"
 )
 
 // CachedClient is the client API for Cached service.
@@ -29,6 +30,7 @@ const (
 type CachedClient interface {
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetResult, error)
 	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetResult, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResult, error)
 }
 
 type cachedClient struct {
@@ -57,12 +59,22 @@ func (c *cachedClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.Cal
 	return out, nil
 }
 
+func (c *cachedClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResult, error) {
+	out := new(DeleteResult)
+	err := c.cc.Invoke(ctx, Cached_Delete_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CachedServer is the server API for Cached service.
 // All implementations must embed UnimplementedCachedServer
 // for forward compatibility
 type CachedServer interface {
 	Get(context.Context, *GetRequest) (*GetResult, error)
 	Set(context.Context, *SetRequest) (*SetResult, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResult, error)
 	mustEmbedUnimplementedCachedServer()
 }
 
@@ -75,6 +87,9 @@ func (UnimplementedCachedServer) Get(context.Context, *GetRequest) (*GetResult, 
 }
 func (UnimplementedCachedServer) Set(context.Context, *SetRequest) (*SetResult, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Set not implemented")
+}
+func (UnimplementedCachedServer) Delete(context.Context, *DeleteRequest) (*DeleteResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedCachedServer) mustEmbedUnimplementedCachedServer() {}
 
@@ -125,6 +140,24 @@ func _Cached_Set_Handler(srv interface{}, ctx context.Context, dec func(interfac
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Cached_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CachedServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Cached_Delete_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CachedServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Cached_ServiceDesc is the grpc.ServiceDesc for Cached service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -139,6 +172,10 @@ var Cached_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Set",
 			Handler:    _Cached_Set_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _Cached_Delete_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

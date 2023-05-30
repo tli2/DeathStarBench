@@ -34,7 +34,7 @@ const (
 	name = "srv-cached"
 )
 
-var CACHE_SERVICES = []string{"user"}
+var CACHE_SERVICES = []string{"user", "graph"}
 
 func key2bin(key string) uint32 {
 	h := fnv.New32a()
@@ -161,6 +161,24 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, er
 	}
 
 	res.Val, res.Ok = s.bins[b].cache[req.Key]
+	if time.Since(st) > 2*time.Millisecond {
+		log2.Printf("Long cache get %v", time.Since(st))
+	}
+	return res, nil
+}
+
+func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResult, error) {
+	st := time.Now()
+	res := &pb.DeleteResult{}
+	b := key2bin(req.Key)
+	s2 := time.Now()
+	s.bins[b].Lock()
+	defer s.bins[b].Unlock()
+	if time.Since(s2) > 2*time.Millisecond {
+		log2.Printf("Long lock acquisition get %v", time.Since(s2))
+	}
+	delete(s.bins[b].cache, req.Key)
+	res.Ok = true
 	if time.Since(st) > 2*time.Millisecond {
 		log2.Printf("Long cache get %v", time.Since(st))
 	}
