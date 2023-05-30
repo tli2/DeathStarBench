@@ -105,9 +105,11 @@ func MakeUserSrv() *UserSrv {
 		log.Panic().Msg(err.Error())
 	}
 	collection := session.DB("socialnetwork").C("user")
+	/*
 	if err = collection.DropCollection(); err != nil {
 		log.Fatal().Msg(err.Error())
 	}
+	*/
 	collection.EnsureIndexKey("userid")
 
 	log.Info().Msg("New session successfull...")
@@ -177,7 +179,7 @@ func (usrv *UserSrv) Shutdown() {
 
 func (usrv *UserSrv) CheckUser(
 		ctx context.Context, req *proto.CheckUserRequest) (*proto.CheckUserResponse, error) {
-	log.Info().Msgf("Checking user at %v: %v\n", usrv.sid, req.Usernames)
+	log.Info().Msgf("Checking user at %v: %v", usrv.sid, req.Usernames)
 	userids := make([]int64, len(req.Usernames))
 	res := &proto.CheckUserResponse{}
 	res.Ok = "No"
@@ -203,7 +205,7 @@ func (usrv *UserSrv) CheckUser(
 
 func (usrv *UserSrv) RegisterUser(
 		ctx context.Context, req *proto.RegisterUserRequest) (*proto.UserResponse, error) {
-	log.Info().Msgf("Register user at %v: %v\n", usrv.sid, req)
+	log.Info().Msgf("Register user at %v: %v", usrv.sid, req)
 	res := &proto.UserResponse{}
 	res.Ok = "No"
 	user, err := usrv.getUserbyUname(ctx, req.Username)
@@ -217,7 +219,11 @@ func (usrv *UserSrv) RegisterUser(
 	pswd_hashed := fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password)))
 	userid := usrv.getNextUserId()
 	newUser := User{
-		Userid: userid, Lastname: req.Lastname, Firstname: req.Firstname, Password: pswd_hashed }
+		Userid: userid,
+		Username: req.Username,
+		Lastname: req.Lastname,
+		Firstname: req.Firstname,
+		Password: pswd_hashed}
 	if err := usrv.mongoCo.Insert(&newUser); err != nil {
 		log.Fatal().Msg(err.Error())
 		return res, err
@@ -229,7 +235,7 @@ func (usrv *UserSrv) RegisterUser(
 
 func (usrv *UserSrv) Login(
 		ctx context.Context, req *proto.LoginRequest) (*proto.UserResponse, error) {
-	log.Info().Msgf("User login with %v: %v\n", usrv.sid, req)
+	log.Info().Msgf("User login with %v: %v", usrv.sid, req)
 	res := &proto.UserResponse{}
 	res.Ok = "Login Failure."
 	user, err := usrv.getUserbyUname(ctx, req.Username)
@@ -250,17 +256,16 @@ func (usrv *UserSrv) getUserbyUname(ctx context.Context, username string) (*User
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("User %v cache miss\n", key)
+		log.Info().Msgf("User %v cache miss", key)
 		var users []User
 		if err = usrv.mongoCo.Find(&bson.M{"username": username}).All(&users); err != nil {
 			return nil, err
 		} 
-		log.Info().Msgf("%d Mongo records: %v", len(users), user)
 		if len(users) == 0 {
 			return nil, nil
 		}
 		user = &users[0]
-		log.Info().Msgf("Found user %v in DB: %v\n", username, user)
+		log.Info().Msgf("Found user %v in DB: %v", username, user)
 		encodedUser, err := json.Marshal(user)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
@@ -268,7 +273,7 @@ func (usrv *UserSrv) getUserbyUname(ctx context.Context, username string) (*User
 		}
 		usrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedUser})
 	} else {
-		log.Info().Msgf("Found user %v in cache!\n", username)
+		log.Info().Msgf("Found user %v in cache!", username)
 		json.Unmarshal(userItem.Value, user)
 	}
 	return user, nil
