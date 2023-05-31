@@ -203,17 +203,17 @@ func (gsrv *GraphSrv) Follow(
 
 func (gsrv *GraphSrv) Unfollow(
 		ctx context.Context, req *proto.UnfollowRequest) (*proto.GraphUpdateResponse, error) {
-	return gsrv.updateGraph(ctx, req.Followerid, req.Followeeid, true)
+	return gsrv.updateGraph(ctx, req.Followerid, req.Followeeid, false)
 }
 
 func (gsrv *GraphSrv) FollowWithUname(
 		ctx context.Context, req *proto.FollowWithUnameRequest) (*proto.GraphUpdateResponse, error) {
-	return nil, nil
+	return gsrv.updateGraphWithUname(ctx, req.Followeruname, req.Followeeuname, true)
 }
 
 func (gsrv *GraphSrv) UnfollowWithUname(
 		ctx context.Context, req *proto.UnfollowWithUnameRequest)(*proto.GraphUpdateResponse, error){
-	return nil, nil
+	return gsrv.updateGraphWithUname(ctx, req.Followeruname, req.Followeeuname, false)
 }
 
 func (gsrv *GraphSrv) updateGraph(
@@ -254,34 +254,20 @@ func (gsrv *GraphSrv) updateGraph(
 	return res, nil
 }
 
-/*
 func (gsrv *GraphSrv) updateGraphWithUname(
-		follwer_uname, followee_uname string, isFollow bool) (*proto.GraphUpdateResponse, error) {
-	res = &proto.GraphUpdateResponse{}
-	res.Ok = "No"
-	// get follower
-	follower_arg := &proto.CheckUserRequest{Usernames: []string{follwer_uname}}
-	follower_res := &proto.CheckUserResponse{}
-	if err := gsrv.userc.RPC("User.CheckUser", follower_arg, follower_res); err != nil {
-		return err
-	} else if follower_res.Ok != USER_QUERY_OK {
-		res.Ok = "Follower does not exist"
-		return nil
+		ctx context.Context, follwerUname, followeeUname string, isFollow bool) (
+		*proto.GraphUpdateResponse, error) {
+	userReq := &userpb.CheckUserRequest{Usernames: []string{follwerUname, followeeUname}}
+	userRes, err := gsrv.userc.CheckUser(ctx, userReq)
+	if err != nil {
+		return nil, err
+	} else if userRes.Ok != user.USER_QUERY_OK {
+		log.Error().Msgf("Missing user id for %v %v: %v", follwerUname, followeeUname, userRes)
+		return &proto.GraphUpdateResponse{Ok: "Follower or Followee does not exist"}, nil
 	}
-	followerid := follower_res.Userids[0]
-	// get followee id
-	followee_arg := &proto.CheckUserRequest{Usernames: []string{followee_uname}}
-	followee_res := &proto.CheckUserResponse{}
-	if err := gsrv.userc.RPC("User.CheckUser", followee_arg, followee_res); err != nil {
-		return err
-	} else 	if followee_res.Ok != USER_QUERY_OK {
-		res.Ok = "Followee does not exist"
-		return nil
-	}
-	followeeid := followee_res.Userids[0]
-	return gsrv.updateGraph(followerid, followeeid, isFollow, res)
+	followerid, followeeid := userRes.Userids[0], userRes.Userids[1]
+	return gsrv.updateGraph(ctx, followerid, followeeid, isFollow)
 }
-*/
 
 func (gsrv *GraphSrv) clearCache(ctx context.Context, followerid, followeeid int64) {
 	follower_key := FOLLOWER_CACHE_PREFIX + strconv.FormatInt(followeeid, 10)
