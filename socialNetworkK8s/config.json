@@ -6,5 +6,6 @@
   "GeoPort": "8083",
   "UserPort": "8084",
   "GraphPort": "8085",
+  "PostPort": "8086",
   "MongoAddress": "mongodb-sn:27017"
 }
