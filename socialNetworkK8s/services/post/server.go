@@ -159,6 +159,7 @@ func (psrv *PostSrv) StorePost(
 		log.Fatal().Msg(err.Error())
 		return res, err
 	}
+	res.Ok = POST_QUERY_OK
 	return res, nil
 }
 
@@ -225,6 +226,7 @@ func postToBson(post *proto.Post) *PostBson {
 		Timestamp: post.Timestamp,
 		Creator: post.Creator,
 		Text: post.Text,
+		Usermentions: post.Usermentions,
 		Medias: post.Medias,
 		Urls: post.Urls,
 	}
@@ -237,6 +239,7 @@ func bsonToPost(bson *PostBson) *proto.Post {
 		Timestamp: bson.Timestamp,
 		Creator: bson.Creator,
 		Text: bson.Text,
+		Usermentions: bson.Usermentions,
 		Medias: bson.Medias,
 		Urls: bson.Urls,
 	}

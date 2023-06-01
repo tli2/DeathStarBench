@@ -1,4 +1,4 @@
-package socialnetworkk8_test
+package test
 
 import (
 	"testing"
