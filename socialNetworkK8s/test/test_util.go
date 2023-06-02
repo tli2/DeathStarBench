@@ -58,6 +58,18 @@ func (tu *TestUtil) clearDB() error {
 		log.Error().Msgf("Cannot dop user collection: %v", err)
 		return err
 	}
+	if err := tu.mongoSess.DB("socialnetwork").C("post").DropCollection(); err != nil {
+		log.Error().Msgf("Cannot dop post collection: %v", err)
+		return err
+	}
+	if err := tu.mongoSess.DB("socialnetwork").C("graph-follower").DropCollection(); err != nil {
+		log.Error().Msgf("Cannot dop graph follower collection: %v", err)
+		return err
+	}
+	if err := tu.mongoSess.DB("socialnetwork").C("graph-followee").DropCollection(); err != nil {
+		log.Error().Msgf("Cannot dop grap followee collection: %v", err)
+		return err
+	}
 	return nil
 }
 
