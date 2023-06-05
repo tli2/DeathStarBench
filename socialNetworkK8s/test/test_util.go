@@ -70,6 +70,11 @@ func (tu *TestUtil) clearDB() error {
 		log.Error().Msgf("Cannot dop grap followee collection: %v", err)
 		return err
 	}
+	if err := tu.mongoSess.DB("socialnetwork").C("timeline").DropCollection(); err != nil {
+		log.Error().Msgf("Cannot dop timeline collection: %v", err)
+		return err
+	}
+
 	return nil
 }
 

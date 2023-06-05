@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package timeline;
+
+import "services/post/proto/post.proto";
+
+option go_package = "./services/timeline/proto";
+
+service Timeline {
+	rpc WriteTimeline(WriteTimelineRequest) returns (WriteTimelineResponse);
+	rpc ReadTimeline(ReadTimelineRequest) returns (ReadTimelineResponse);
+}
+
+message WriteTimelineRequest {
+	int64 userid = 1;
+	int64 postid = 2;
+	int64 timestamp = 3;
+}
+
+message WriteTimelineResponse {
+	string ok = 1;
+}
+
+message ReadTimelineRequest {
+	int64 userid = 1;
+	int32 start = 2;
+	int32 stop = 3;
+}
+
+message ReadTimelineResponse {
+	string   ok = 1;
+	repeated post.Post posts = 2;
+}
+
