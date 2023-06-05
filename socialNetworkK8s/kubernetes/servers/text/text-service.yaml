@@ -10,9 +10,9 @@ metadata:
   name: text
 spec:
   ports:
-    - name: "8083"
-      port: 8083
-      targetPort: 8083
+    - name: "8088"
+      port: 8088
+      targetPort: 8088
     - name: "5000"
       port: 5000
       targetPort: 5000

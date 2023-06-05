@@ -69,7 +69,7 @@ func TestText(t *testing.T) {
 	assert.Equal(t, "Hello World!", res_text.Text)
 
 	arg_text.Text = 
-		"First post! @user_1@user_2 http://www.google.com/q=apple @user_4 https://www.bing.com Over!"
+		"First post! @user_1@user_2 http://www.google.com/q=appleee @user_4 https://www.binggg.com Over!"
 	res_text, err = textClient.ProcessText(context.Background(), arg_text)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_text.Ok)
@@ -83,8 +83,26 @@ func TestText(t *testing.T) {
 	expectedText := fmt.Sprintf("First post! @user_1@user_2 %v @user_4 %v Over!", sUrl1, sUrl2)
 	assert.Equal(t, expectedText, res_text.Text)
 
+	// check urls
+	urlTestPort := "9001"
+	ufcmd, err := StartFowarding("url", urlTestPort, "8087")
+	assert.Nil(t, err)
+	urlconn, err := dialer.Dial("localhost:" + urlTestPort, nil)
+	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
+	urlClient := urlpb.NewUrlClient(urlconn)
+	assert.NotNil(t, urlClient)
+
+	arg_get := &urlpb.GetUrlsRequest{Shorturls: []string{sUrl1, sUrl2}}
+	res_get, err := urlClient.GetUrls(context.Background(), arg_get)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_get.Ok)
+	assert.Equal(t, 2, len(res_get.Extendedurls))
+	assert.Equal(t, "http://www.google.com/q=appleee", res_get.Extendedurls[0])
+	assert.Equal(t, "https://www.binggg.com", res_get.Extendedurls[1])
+
 	// Stop fowarding
 	assert.Nil(t, fcmd.Process.Kill())
+	assert.Nil(t, ufcmd.Process.Kill())
 }
 
 
