@@ -7,12 +7,13 @@ import (
 	"socialnetworkk8/dialer"
 	"context"
 	urlpb "socialnetworkk8/services/url/proto"
+	textpb "socialnetworkk8/services/text/proto"
 )
 
 func TestUrl(t *testing.T) {
 	// start server
 	testPort := "9000"
-	fcmd, err := StartFowarding("url", testPort, "8084")
+	fcmd, err := StartFowarding("url", testPort, "8087")
 	assert.Nil(t, err)
 	conn, err := dialer.Dial("localhost:" + testPort, nil)
 	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
@@ -38,6 +39,49 @@ func TestUrl(t *testing.T) {
 	assert.Equal(t, 2, len(res_get.Extendedurls))
 	assert.Equal(t, url1, res_get.Extendedurls[0])
 	assert.Equal(t, url2, res_get.Extendedurls[1])
+
+	// Stop fowarding
+	assert.Nil(t, fcmd.Process.Kill())
+}
+
+func TestText(t *testing.T) {
+	// start server
+	testPort := "9000"
+	fcmd, err := StartFowarding("text", testPort, "8088")
+	assert.Nil(t, err)
+	conn, err := dialer.Dial("localhost:" + testPort, nil)
+	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
+	textClient := textpb.NewTextClient(conn)
+	assert.NotNil(t, textClient)
+
+	// process text
+	arg_text := &textpb.ProcessTextRequest{}
+	res_text, err := textClient.ProcessText(context.Background(), arg_text)
+	assert.Nil(t, err)
+	assert.Equal(t, "Cannot process empty text.", res_text.Ok)
+	
+	arg_text.Text = "Hello World!"
+	res_text, err = textClient.ProcessText(context.Background(), arg_text)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_text.Ok)
+	assert.Equal(t, 0, len(res_text.Usermentions))
+	assert.Equal(t, 0, len(res_text.Urls))
+	assert.Equal(t, "Hello World!", res_text.Text)
+
+	arg_text.Text = 
+		"First post! @user_1@user_2 http://www.google.com/q=apple @user_4 https://www.bing.com Over!"
+	res_text, err = textClient.ProcessText(context.Background(), arg_text)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_text.Ok)
+	assert.Equal(t, 3, len(res_text.Usermentions))
+	assert.Equal(t, int64(1), res_text.Usermentions[0])
+	assert.Equal(t, int64(2), res_text.Usermentions[1])
+	assert.Equal(t, int64(4), res_text.Usermentions[2])
+	assert.Equal(t, 2, len(res_text.Urls))
+	sUrl1 := res_text.Urls[0]
+	sUrl2 := res_text.Urls[1]
+	expectedText := fmt.Sprintf("First post! @user_1@user_2 %v @user_4 %v Over!", sUrl1, sUrl2)
+	assert.Equal(t, expectedText, res_text.Text)
 
 	// Stop fowarding
 	assert.Nil(t, fcmd.Process.Kill())

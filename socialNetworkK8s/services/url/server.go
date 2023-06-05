@@ -179,17 +179,17 @@ func (urlsrv *UrlSrv) ComposeUrls(
 		res.Ok = "Empty input"
 		return res, nil
 	}
-	urls := make([]*Url, nUrls)
 	res.Shorturls = make([]string, nUrls)
 	for idx, extendedurl := range req.Extendedurls {
 		shorturl := RandStringRunes(URL_LENGTH)
-		urls[idx] = &Url{Extendedurl: extendedurl, Shorturl: shorturl}
+		url := &Url{Extendedurl: extendedurl, Shorturl: shorturl}
+		if err := urlsrv.mongoCo.Insert(url); err != nil {
+			log.Fatal().Msg(err.Error())
+			return nil, err
+		}
 		res.Shorturls[idx] = URL_HOSTNAME + shorturl
 	} 
-	if err := urlsrv.mongoCo.Insert(urls); err != nil {
-		log.Fatal().Msg(err.Error())
-		return nil, err
-	}
+	
 	res.Ok = URL_QUERY_OK
 	return res, nil
 }
