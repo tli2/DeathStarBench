@@ -40,7 +40,7 @@ func createNPosts(t *testing.T, postc postpb.PostStorageClient, N int, userid in
 	posts := make([]*postpb.Post, N)
 	for i := 0; i < N; i++ {
 		posts[i] = &postpb.Post{
-			Postid: int64(i),
+			Postid: int64(100+i),
 			Posttype: postpb.POST_TYPE_POST,
 			Timestamp: int64(10000+i),
 			Creator: userid,
