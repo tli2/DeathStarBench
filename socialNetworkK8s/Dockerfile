@@ -3,8 +3,8 @@
 FROM golang 
 
 # Download an initial version of Go
-RUN wget "https://go.dev/dl/go1.20.4.linux-amd64.tar.gz" && \
-  tar -C /usr/local -xzf go1.20.4.linux-amd64.tar.gz
+RUN wget "https://go.dev/dl/go1.20.5.linux-amd64.tar.gz" && \
+  tar -C /usr/local -xzf go1.20.5.linux-amd64.tar.gz
 
 # Set the PATH to include the new Go install.
 ENV PATH="${PATH}:/usr/local/go/bin"

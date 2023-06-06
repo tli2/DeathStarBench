@@ -100,8 +100,8 @@ func TestGraph(t *testing.T) {
 	res_get, err = graphClient.GetFollowees(context.Background(), &arg_get_flwEE)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
-	assert.Equal(t, 0, len(res_get.Userids))
-	//assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 has one followee user 2
+	assert.Equal(t, 1, len(res_get.Userids))
+	assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 has one followee user 2
 
 	// Follow
 	arg_follow := graphpb.FollowRequest{Followerid: int64(1), Followeeid: int64(0)}
@@ -118,9 +118,9 @@ func TestGraph(t *testing.T) {
 	res_get, err = graphClient.GetFollowees(context.Background(), &arg_get_flwEE)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
-	assert.Equal(t, 1, len(res_get.Userids))
+	assert.Equal(t, 2, len(res_get.Userids))
 	assert.Equal(t, int64(0), res_get.Userids[0]) // user 1 has two followees user 0 & 2
-	//assert.Equal(t, int64(2), res_get.Userids[1]) // user 1 has two followees user 0 & 2
+	assert.Equal(t, int64(2), res_get.Userids[1]) 
 
 	// Unfollow
 	arg_unfollow := graphpb.UnfollowRequest{Followerid: int64(1), Followeeid: int64(0)}
@@ -136,8 +136,8 @@ func TestGraph(t *testing.T) {
 	res_get, err = graphClient.GetFollowees(context.Background(), &arg_get_flwEE)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_get.Ok)
-	assert.Equal(t, 0, len(res_get.Userids))
-	//assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 has one followee user 2
+	assert.Equal(t, 1, len(res_get.Userids))
+	assert.Equal(t, int64(2), res_get.Userids[0]) // user 1 has one followee user 2
 
 	// Stop fowarding
 	assert.Nil(t, fcmd.Process.Kill())

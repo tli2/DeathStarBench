@@ -9,8 +9,7 @@ import (
 	postpb "socialnetworkk8/services/post/proto"
 	mediapb "socialnetworkk8/services/media/proto"
 	tlpb "socialnetworkk8/services/timeline/proto"
-
-
+	homepb "socialnetworkk8/services/home/proto"
 )
 
 func IsPostEqual(a, b *postpb.Post) bool {
@@ -38,13 +37,14 @@ func IsPostEqual(a, b *postpb.Post) bool {
 	return true
 }
 
-func createNPosts(t *testing.T, postc postpb.PostStorageClient, N int, userid int64) []*postpb.Post {
+func createNPosts(
+		t *testing.T, postc postpb.PostStorageClient, N int, userid, basePid int64) []*postpb.Post {
 	posts := make([]*postpb.Post, N)
 	for i := 0; i < N; i++ {
 		posts[i] = &postpb.Post{
 			Postid: int64(100+i),
 			Posttype: postpb.POST_TYPE_POST,
-			Timestamp: int64(10000+i),
+			Timestamp: int64(basePid+i),
 			Creator: userid,
 			Text: fmt.Sprintf("Post Number %v", i+1),
 			Urls: []string{"xxxxx"},
@@ -64,6 +64,22 @@ func writeTimeline(t *testing.T, tlc tlpb.TimelineClient, post *postpb.Post, use
 		Postid: post.Postid, 
 		Timestamp: post.Timestamp}
 	res_write, err := tlc.WriteTimeline(context.Background(), arg_write)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_write.Ok)
+}
+
+func writeHomeTimeline(t *testing.T, homec *homepb.HomeClient, post *proto.Post, userid int64) {
+	mentionids := make([]int64, 0)
+	for _, mention := range post.Usermentions {
+		mentionids = append(mentionids, mention.Userid)
+	}
+	arg_write := &homepb.WriteHomeTimelineRequest{
+		Userid: userid,
+		Postid: post.Postid,
+		Timestamp: post.Timestamp,
+		Usermentionids: mentionids,
+	}
+	res_write, err := homec.WriteHomeTimeline(context.Background(), arg_write)
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_write.Ok)
 }
@@ -145,7 +161,7 @@ func TestTimeline(t *testing.T) {
 
 	// create and store N posts
 	NPOST, userid := 4, int64(200)
-	posts := createNPosts(t, postClient, NPOST, userid)
+	posts := createNPosts(t, postClient, NPOST, userid, 10000)
 
 	// write posts 0 to N/2 to timeline
 	for i := 0; i < NPOST/2; i++ {
@@ -180,6 +196,54 @@ func TestTimeline(t *testing.T) {
 	// Stop forwarding
 	assert.Nil(t, pfcmd.Process.Kill())
 	assert.Nil(t, tfcmd.Process.Kill())
+}
+
+func TestHome(t *testing.T) {
+	// start forwarding
+	postTestPort, homeTestPort := "9000", "9001"
+	pfcmd, err := StartFowarding("post", postTestPort, "8086")
+	assert.Nil(t, err)
+	hfcmd, err := StartFowarding("home", homeTestPort, "8090")
+	assert.Nil(t, err)
+	postConn, err := dialer.Dial("localhost:" + postTestPort, nil)
+	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
+	postClient := postpb.NewPostStorageClient(postConn)
+	assert.NotNil(t, postClient)
+	homeConn, err := dialer.Dial("localhost:" + homeTestPort, nil)
+	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
+	homeClient := homepb.NewHomeClient(homeConn)
+	assert.NotNil(t, homeClient)
+	
+	// create and store N posts
+	NPOST, userid := 3, int64(1)
+	posts := createNPosts(t, postc, NPOST, userid, 20000)
+	
+	// write to home timelines and check
+	for i := 0; i < NPOST; i++ {
+		writeHomeTimeline(t, homec, posts[i], userid)
+	}
+	// first post is on user 0 and 11's home timelines
+	// second post is on user 0 and 12's home timelines ......
+	arg_read := &tlpb.ReadTimelineRequest{Userid: int64(0), Start: int32(0), Stop: int32(NPOST)}
+	res_read, err := homec.ReadHomeTimeline(context.Background(), arg_read)
+	assert.Nil(t, err)
+	assert.Equal(t, NPOST, len(res_read.Posts))
+	for i, post := range(res_read.Posts) {
+		// posts should be in reverse order
+		assert.True(t, IsPostEqual(posts[NPOST-i-1], post))
+	}
+	arg_read.Stop = int32(1)
+	for i := 0; i < NPOST; i++ {
+		arg_read.Userid = userid*10+int64(i+1)
+		res_read, err = homec.ReadHomeTimeline(context.Background(), arg_read)
+		assert.Nil(t, err)
+		assert.Equal(t, 1, len(res_read.Posts))
+		assert.True(t, IsPostEqual(posts[i], res_read.Posts[0]))
+	}
+
+	// Stop forwarding
+	assert.Nil(t, pfcmd.Process.Kill())
+	assert.Nil(t, hfcmd.Process.Kill())
 }
 
 func TestMedia(t *testing.T) {

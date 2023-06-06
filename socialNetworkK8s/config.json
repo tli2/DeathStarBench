@@ -4,12 +4,13 @@
   "FrontendPort": "5000",
   "CachedPort": "8091",
   "GeoPort": "8083",
-  "MeadiaPort": "8082",
+  "MediaPort": "8082",
   "UserPort": "8084",
   "GraphPort": "8085",
   "PostPort": "8086",
   "UrlPort": "8087",
   "TextPort": "8088",
   "TimelinePort": "8089",
+  "HomePort": "8090",
   "MongoAddress": "mongodb-sn:27017"
 }

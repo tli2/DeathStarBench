@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"socialnetworkk8/services/cacheclnt"
 	"socialnetworkk8/services/user"
 	"socialnetworkk8/tune"
@@ -85,12 +86,6 @@ func (tu *TestUtil) clearDB() error {
 	return nil
 }
 
-/*
-func (tu *TestUtil) ClearCache() {
-
-}
-*/
-
 func (tu *TestUtil) initUsers() error {
 	// create NUSER test users
 	for i := 0; i < NUSER; i++ {
@@ -109,6 +104,22 @@ func (tu *TestUtil) initUsers() error {
 	return nil
 }
 
+func (tu *TestUtil) initGraphs() error {
+	//user i follows user i+1
+	for i := 0; i < NUSER-1; i++ {
+		_, err1 := tu.mongoSess.DB("socialnetwork").C("graph-followers").Upsert(
+			&bson.M{"userid": int64(i+1)}, &bson.M{"$addToSet": bson.M{"edges": int64(i)}})
+		_, err2 := tu.mongoSess.DB("socialnetwork").C("graph-followees").Upsert(
+			&bson.M{"userid": int64(i)}, &bson.M{"$addToSet": bson.M{"edges": int64(i+1)}})
+		if err1 != nil || err2 != nil {
+			err := fmt.Errorf("error updating graph %v %v", err1, err2)
+			log.Fatal().Msg(err.Error())
+			return err
+		}
+	}
+	return nil
+}
+
 func (tu *TestUtil) Close() {
 	tu.mongoSess.Close()
 	tu.fcmd.Process.Kill()
@@ -119,4 +130,5 @@ func init() {
 	defer tu.Close()
 	tu.clearDB()
 	tu.initUsers()
+	tu.initGraphs()
 }
