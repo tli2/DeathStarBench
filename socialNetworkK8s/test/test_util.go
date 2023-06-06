@@ -78,6 +78,10 @@ func (tu *TestUtil) clearDB() error {
 		log.Error().Msgf("Cannot drop url collection: %v", err)
 		return err
 	}
+	if err := tu.mongoSess.DB("socialnetwork").C("media").DropCollection(); err != nil {
+		log.Error().Msgf("Cannot drop media collection: %v", err)
+		return err
+	}
 	return nil
 }
 

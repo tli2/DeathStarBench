@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: media
+  name: media
+spec:
+  ports:
+    - name: "8082"
+      port: 8082
+      targetPort: 8082
+    - name: "5000"
+      port: 5000
+      targetPort: 5000
+    - name: "9999"
+      port: 9999
+      targetPort: 9999
+  selector:
+    io.kompose.service: media
+status:
+  loadBalancer: {}

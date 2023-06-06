@@ -7,7 +7,9 @@ import (
 	"socialnetworkk8/dialer"
 	"context"
 	postpb "socialnetworkk8/services/post/proto"
+	mediapb "socialnetworkk8/services/media/proto"
 	tlpb "socialnetworkk8/services/timeline/proto"
+
 
 )
 
@@ -179,3 +181,45 @@ func TestTimeline(t *testing.T) {
 	assert.Nil(t, pfcmd.Process.Kill())
 	assert.Nil(t, tfcmd.Process.Kill())
 }
+
+func TestMedia(t *testing.T) {
+	// start k8s port forwarding and set up client connection.
+	testPort := "9000"
+	fcmd, err := StartFowarding("media", testPort, "8082")
+	assert.Nil(t, err)
+	conn, err := dialer.Dial("localhost:" + testPort, nil)
+	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
+	mediaClient := mediapb.NewMediaStorageClient(conn)
+	assert.NotNil(t, mediaClient)
+
+	// store two media
+	mdata1 := []byte{1, 3, 5, 7, 9, 11, 13, 15}
+	mdata2 := []byte{2, 3, 5, 7, 11, 13, 17, 19}
+	arg_store := &mediapb.StoreMediaRequest{Mediatype: "File", Mediadata: mdata1}
+	res_store, err := mediaClient.StoreMedia(context.Background(), arg_store)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_store.Ok)
+	mId1 := res_store.Mediaid
+	arg_store = &mediapb.StoreMediaRequest{Mediatype: "Video", Mediadata: mdata2}
+	res_store, err = mediaClient.StoreMedia(context.Background(), arg_store)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_store.Ok)
+	mId2 := res_store.Mediaid
+
+	// read the medias
+	arg_read := &mediapb.ReadMediaRequest{Mediaids: []int64{mId1, mId2}}
+	res_read, err := mediaClient.ReadMedia(context.Background(), arg_read)
+	assert.Nil(t, err)
+	assert.Equal(t, "OK", res_read.Ok)
+	assert.Equal(t, 2, len(res_read.Mediatypes))
+	assert.Equal(t, 2, len(res_read.Mediadatas))
+	assert.Equal(t, "File", res_read.Mediatypes[0])
+	assert.Equal(t, "Video", res_read.Mediatypes[1])
+	assert.Equal(t, mdata1, res_read.Mediadatas[0])
+	assert.Equal(t, mdata2, res_read.Mediadatas[1])
+
+	// Stop forwarding
+	assert.Nil(t, fcmd.Process.Kill())
+}
+
+

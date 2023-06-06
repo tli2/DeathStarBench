@@ -6,7 +6,6 @@ import (
 	"net"
 	"strconv"
 	"time"
-
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"socialnetworkk8/tls"
 	consul "github.com/hashicorp/consul/api"
@@ -41,6 +40,7 @@ func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.Clien
 
 	dialopts := []grpc.DialOption{
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                24 * time.Hour,
 			Timeout:             120 * time.Second,
 			PermitWithoutStream: true,
 		}),

@@ -1,4 +1,4 @@
-package post
+package media
 
 import (
 	"encoding/json"
@@ -8,7 +8,9 @@ import (
 	"strconv"
 	"time"
 	"fmt"
+	"sync"
 	"gopkg.in/mgo.v2"
+	"math/rand"
 	"gopkg.in/mgo.v2/bson"
 	"net"
 	"net/http"
@@ -19,7 +21,7 @@ import (
 	"socialnetworkk8/tune"
 	"socialnetworkk8/services/cacheclnt"
 	"socialnetworkk8/tls"
-	"socialnetworkk8/services/post/proto"
+	"socialnetworkk8/services/media/proto"
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
 	"github.com/rs/zerolog/log"
@@ -30,13 +32,13 @@ import (
 )
 
 const (
-	POST_SRV_NAME = "srv-post"
-	POST_QUERY_OK = "OK"
-	POST_CACHE_PREFIX = "post_"
+	MEDIA_SRV_NAME = "srv-media"
+	MEDIA_QUERY_OK = "OK"
+	MEDIA_CACHE_PREFIX = "media_"
 )
 
-type PostSrv struct {
-	proto.UnimplementedPostStorageServer 
+type MediaSrv struct {
+	proto.UnimplementedMediaStorageServer 
 	uuid         string
 	cachec       *cacheclnt.CacheClnt
 	mongoSess    *mgo.Session
@@ -45,9 +47,12 @@ type PostSrv struct {
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
+	sid          int32 // sid is a random number between 0 and 2^30
+	ucount       int32 //This server may overflow with over 2^31 medias
+    mu           sync.Mutex
 }
 
-func MakePostSrv() *PostSrv {
+func MakeMediaSrv() *MediaSrv {
 	tune.Init()
 	log.Info().Msg("Reading config...")
 	jsonFile, err := os.Open("config.json")
@@ -60,8 +65,8 @@ func MakePostSrv() *PostSrv {
 	json.Unmarshal([]byte(byteValue), &result)
 	log.Info().Msg("Successfull")
 
-	serv_port, _ := strconv.Atoi(result["PostPort"])
-	serv_ip := result["PostIP"]
+	serv_port, _ := strconv.Atoi(result["MediaPort"])
+	serv_ip := result["MediaIP"]
 	log.Info().Msgf("Read target port: %v", serv_port)
 	log.Info().Msgf("Read consul address: %v", result["consulAddress"])
 	log.Info().Msgf("Read jaeger address: %v", result["jaegerAddress"])
@@ -71,8 +76,8 @@ func MakePostSrv() *PostSrv {
 	)
 	flag.Parse()
 
-	log.Info().Msgf("Initializing jaeger [service name: %v | host: %v]...", "post", *jaegeraddr)
-	tracer, err := tracing.Init("post", *jaegeraddr)
+	log.Info().Msgf("Initializing jaeger [service name: %v | host: %v]...", "media", *jaegeraddr)
+	tracer, err := tracing.Init("media", *jaegeraddr)
 	if err != nil {
 		log.Panic().Msgf("Got error while initializing jaeger agent: %v", err)
 	}
@@ -92,10 +97,10 @@ func MakePostSrv() *PostSrv {
 	if err != nil {
 		log.Panic().Msg(err.Error())
 	}
-	collection := session.DB("socialnetwork").C("post")
-	collection.EnsureIndexKey("postid")
+	collection := session.DB("socialnetwork").C("media")
+	collection.EnsureIndexKey("mediaid")
 	log.Info().Msg("New session successfull.")
-	return &PostSrv{
+	return &MediaSrv{
 		Port:         serv_port,
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
@@ -107,14 +112,15 @@ func MakePostSrv() *PostSrv {
 }
 
 // Run starts the server
-func (psrv *PostSrv) Run() error {
-	if psrv.Port == 0 {
+func (msrv *MediaSrv) Run() error {
+	if msrv.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
 
 	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	log.Info().Msg("Initializing gRPC Server...")
-	psrv.uuid = uuid.New().String()
+	msrv.uuid = uuid.New().String()
+	msrv.sid = rand.Int31n(536870912) // 2^29
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
@@ -123,18 +129,18 @@ func (psrv *PostSrv) Run() error {
 			PermitWithoutStream: true,
 		}),
 		grpc.UnaryInterceptor(
-			otgrpc.OpenTracingServerInterceptor(psrv.Tracer),
+			otgrpc.OpenTracingServerInterceptor(msrv.Tracer),
 		),
 	}
 	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
 		opts = append(opts, tlsopt)
 	}
 	grpcSrv := grpc.NewServer(opts...)
-	proto.RegisterPostStorageServer(grpcSrv, psrv)
+	proto.RegisterMediaStorageServer(grpcSrv, msrv)
 
 	// listener
 	log.Info().Msg("Initializing request listener ...")
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", psrv.Port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", msrv.Port))
 	if err != nil {
 		return fmt.Errorf("failed to listen: %v", err)
 	}
@@ -142,7 +148,7 @@ func (psrv *PostSrv) Run() error {
 	go func() {
 		log.Error().Msgf("Error ListenAndServe: %v", http.ListenAndServe(":5000", nil))
 	}()
-	err = psrv.Registry.Register(POST_SRV_NAME, psrv.uuid, psrv.IpAddr, psrv.Port)
+	err = msrv.Registry.Register(MEDIA_SRV_NAME, msrv.uuid, msrv.IpAddr, msrv.Port)
 	if err != nil {
 		return fmt.Errorf("failed register: %v", err)
 	}
@@ -150,109 +156,90 @@ func (psrv *PostSrv) Run() error {
 	return grpcSrv.Serve(lis)
 }
 
-func (psrv *PostSrv) StorePost(
-		ctx context.Context, req *proto.StorePostRequest) (*proto.StorePostResponse, error) {
-	res := &proto.StorePostResponse{}
-	res.Ok = "No"
-	postBson := postToBson(req.Post)
-	if err := psrv.mongoCo.Insert(postBson); err != nil {
+func (msrv *MediaSrv) StoreMedia(
+		ctx context.Context, req *proto.StoreMediaRequest) (*proto.StoreMediaResponse, error){
+	res := &proto.StoreMediaResponse{Ok: "No"}
+	mId := msrv.getNextMediaId()
+	media := &Media{mId, req.Mediatype, req.Mediadata}
+	if err := msrv.mongoCo.Insert(media); err != nil {
 		log.Fatal().Msg(err.Error())
 		return res, err
 	}
-	res.Ok = POST_QUERY_OK
+	res.Ok = MEDIA_QUERY_OK
+	res.Mediaid = mId
 	return res, nil
 }
 
-func (psrv *PostSrv) ReadPosts(
-		ctx context.Context, req *proto.ReadPostsRequest) (*proto.ReadPostsResponse, error) {
-	res := &proto.ReadPostsResponse{}
-	res.Ok = "No."
-	posts := make([]*proto.Post, len(req.Postids))
+func (msrv *MediaSrv) ReadMedia(
+		ctx context.Context, req *proto.ReadMediaRequest) (*proto.ReadMediaResponse, error){
+	res := &proto.ReadMediaResponse{Ok: "No"}
+	mediatypes := make([]string, len(req.Mediaids))
+	mediadatas := make([][]byte, len(req.Mediaids))
 	missing := false
-	for idx, postid := range req.Postids {
-		postBson, err := psrv.getPost(ctx, postid)
+	for idx, mediaid := range req.Mediaids {
+		media, err := msrv.getMedia(ctx, mediaid)
 		if err != nil {
 			return nil, err
 		} 
-		if postBson == nil {
+		if media == nil {
 			missing = true
-			res.Ok = res.Ok + fmt.Sprintf(" Missing %v.", postid)
+			res.Ok = res.Ok + fmt.Sprintf(" Missing %v.", mediaid)
 		} else {
-			posts[idx] = bsonToPost(postBson)
+			mediatypes[idx] = media.Type
+			mediadatas[idx] = media.Data
 		}
 	}
-	res.Posts = posts
+	res.Mediatypes = mediatypes
+	res.Mediadatas = mediadatas
 	if !missing {
-		res.Ok = POST_QUERY_OK
+		res.Ok = MEDIA_QUERY_OK
 	}
 	return res, nil
 }
 
-func (psrv *PostSrv) getPost(ctx context.Context, postid int64) (*PostBson, error) {
-	key := POST_CACHE_PREFIX + strconv.FormatInt(postid, 10) 
-	postBson := &PostBson{}
-	if postItem, err := psrv.cachec.Get(ctx, key); err != nil {
+func (msrv *MediaSrv) getMedia(ctx context.Context, mediaid int64) (*Media, error) {
+	key := MEDIA_CACHE_PREFIX + strconv.FormatInt(mediaid, 10) 
+	media := &Media{}
+	if mediaItem, err := msrv.cachec.Get(ctx, key); err != nil {
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("Post %v cache miss", key)
-		var postBsons []PostBson
-		if err = psrv.mongoCo.Find(&bson.M{"postid": postid}).All(&postBsons); err != nil {
+		log.Info().Msgf("Media %v cache miss", key)
+		var medias []Media
+		if err = msrv.mongoCo.Find(&bson.M{"mediaid": mediaid}).All(&medias); err != nil {
 			return nil, err
 		} 
-		if len(postBsons) == 0 {
+		if len(medias) == 0 {
 			return nil, nil
 		}
-		postBson = &postBsons[0]
-		log.Info().Msgf("Found post %v in DB: %v", postid, postBson)
-		encodedPost, err := json.Marshal(postBson)	
+		media = &medias[0]
+		log.Info().Msgf("Found media %v in DB: %v", mediaid, media)
+		encodedMedia, err := json.Marshal(media)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
 			return nil, err
 		}
-		psrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedPost})
+		msrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedMedia})
 	} else {
-		log.Info().Msgf("Found post %v in cache!", postid)
-		json.Unmarshal(postItem.Value, postBson)
+		log.Info().Msgf("Found media %v in cache!", mediaid)
+		json.Unmarshal(mediaItem.Value, media)
 	}
-	return postBson, nil
+	return media, nil
 }
 
-func postToBson(post *proto.Post) *PostBson {
-	return &PostBson{
-		Postid: post.Postid,
-		Posttype: int32(post.Posttype),
-		Timestamp: post.Timestamp,
-		Creator: post.Creator,
-		Text: post.Text,
-		Usermentions: post.Usermentions,
-		Medias: post.Medias,
-		Urls: post.Urls,
-	}
+type Media struct {
+	Mediaid int64  `bson:mediaid`
+	Type    string `bson:type`
+	Data    []byte `bson:data`
 }
 
-func bsonToPost(bson *PostBson) *proto.Post {
-	return &proto.Post{
-		Postid: bson.Postid,
-		Posttype: proto.POST_TYPE(bson.Posttype),
-		Timestamp: bson.Timestamp,
-		Creator: bson.Creator,
-		Text: bson.Text,
-		Usermentions: bson.Usermentions,
-		Medias: bson.Medias,
-		Urls: bson.Urls,
-	}
+func (msrv *MediaSrv) incCountSafe() int32 {
+	msrv.mu.Lock()
+	defer msrv.mu.Unlock()
+	msrv.ucount++
+	return msrv.ucount
 }
 
-type PostBson struct {
-	Postid int64         `bson:postid`
-	Posttype int32       `bson:posttype`
-	Timestamp int64      `bson:timestamp`
-	Creator int64        `bson:creator`
-	Text string          `bson:text`
-	Usermentions []int64 `bson:usermentions`
-	Medias []int64       `bson:medias`
-	Urls []string        `bson:urls`
+func (msrv *MediaSrv) getNextMediaId() int64 {
+	return int64(msrv.sid)*1e10 + int64(msrv.incCountSafe())
 }
-
-
