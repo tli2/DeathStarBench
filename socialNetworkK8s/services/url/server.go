@@ -173,6 +173,7 @@ func (urlsrv *UrlSrv) Run() error {
 
 func (urlsrv *UrlSrv) ComposeUrls(
 		ctx context.Context, req *proto.ComposeUrlsRequest) (*proto.ComposeUrlsResponse, error) {
+	log.Info().Msgf("Received compose request %v", req)
 	nUrls := len(req.Extendedurls)
 	res := &proto.ComposeUrlsResponse{}
 	if nUrls == 0 {
@@ -196,6 +197,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 
 func (urlsrv *UrlSrv) GetUrls(
 		ctx context.Context, req *proto.GetUrlsRequest) (*proto.GetUrlsResponse, error) {
+	log.Info().Msgf("Received get request %v", req)
 	res := &proto.GetUrlsResponse{}
 	res.Ok = "No."
 	extendedurls := make([]string, len(req.Shorturls))

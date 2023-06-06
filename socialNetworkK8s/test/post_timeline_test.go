@@ -44,7 +44,7 @@ func createNPosts(
 		posts[i] = &postpb.Post{
 			Postid: int64(100+i),
 			Posttype: postpb.POST_TYPE_POST,
-			Timestamp: int64(basePid+i),
+			Timestamp: basePid + int64(i),
 			Creator: userid,
 			Text: fmt.Sprintf("Post Number %v", i+1),
 			Urls: []string{"xxxxx"},
@@ -68,10 +68,10 @@ func writeTimeline(t *testing.T, tlc tlpb.TimelineClient, post *postpb.Post, use
 	assert.Equal(t, "OK", res_write.Ok)
 }
 
-func writeHomeTimeline(t *testing.T, homec *homepb.HomeClient, post *proto.Post, userid int64) {
+func writeHomeTimeline(t *testing.T, homec homepb.HomeClient, post *postpb.Post, userid int64) {
 	mentionids := make([]int64, 0)
 	for _, mention := range post.Usermentions {
-		mentionids = append(mentionids, mention.Userid)
+		mentionids = append(mentionids, mention)
 	}
 	arg_write := &homepb.WriteHomeTimelineRequest{
 		Userid: userid,
@@ -216,16 +216,16 @@ func TestHome(t *testing.T) {
 	
 	// create and store N posts
 	NPOST, userid := 3, int64(1)
-	posts := createNPosts(t, postc, NPOST, userid, 20000)
+	posts := createNPosts(t, postClient, NPOST, userid, 20000)
 	
 	// write to home timelines and check
 	for i := 0; i < NPOST; i++ {
-		writeHomeTimeline(t, homec, posts[i], userid)
+		writeHomeTimeline(t, homeClient, posts[i], userid)
 	}
 	// first post is on user 0 and 11's home timelines
 	// second post is on user 0 and 12's home timelines ......
 	arg_read := &tlpb.ReadTimelineRequest{Userid: int64(0), Start: int32(0), Stop: int32(NPOST)}
-	res_read, err := homec.ReadHomeTimeline(context.Background(), arg_read)
+	res_read, err := homeClient.ReadHomeTimeline(context.Background(), arg_read)
 	assert.Nil(t, err)
 	assert.Equal(t, NPOST, len(res_read.Posts))
 	for i, post := range(res_read.Posts) {
@@ -235,7 +235,7 @@ func TestHome(t *testing.T) {
 	arg_read.Stop = int32(1)
 	for i := 0; i < NPOST; i++ {
 		arg_read.Userid = userid*10+int64(i+1)
-		res_read, err = homec.ReadHomeTimeline(context.Background(), arg_read)
+		res_read, err = homeClient.ReadHomeTimeline(context.Background(), arg_read)
 		assert.Nil(t, err)
 		assert.Equal(t, 1, len(res_read.Posts))
 		assert.True(t, IsPostEqual(posts[i], res_read.Posts[0]))

@@ -91,10 +91,10 @@ func (tu *TestUtil) initUsers() error {
 	for i := 0; i < NUSER; i++ {
 		suffix := strconv.Itoa(i)
 		newUser := user.User{
-			Userid: int64(i), 
-			Username: "user_" + suffix, 
-			Lastname: "Lastname" + suffix, 
-			Firstname: "Firstname" + suffix, 
+			Userid: int64(i),
+			Username: "user_" + suffix,
+			Lastname: "Lastname" + suffix,
+			Firstname: "Firstname" + suffix,
 			Password: fmt.Sprintf("%x", sha256.Sum256([]byte("p_user_" + suffix)))}
 		if err := tu.mongoSess.DB("socialnetwork").C("user").Insert(&newUser); err != nil {
 			log.Fatal().Msg(err.Error())
@@ -107,9 +107,9 @@ func (tu *TestUtil) initUsers() error {
 func (tu *TestUtil) initGraphs() error {
 	//user i follows user i+1
 	for i := 0; i < NUSER-1; i++ {
-		_, err1 := tu.mongoSess.DB("socialnetwork").C("graph-followers").Upsert(
+		_, err1 := tu.mongoSess.DB("socialnetwork").C("graph-follower").Upsert(
 			&bson.M{"userid": int64(i+1)}, &bson.M{"$addToSet": bson.M{"edges": int64(i)}})
-		_, err2 := tu.mongoSess.DB("socialnetwork").C("graph-followees").Upsert(
+		_, err2 := tu.mongoSess.DB("socialnetwork").C("graph-followee").Upsert(
 			&bson.M{"userid": int64(i)}, &bson.M{"$addToSet": bson.M{"edges": int64(i+1)}})
 		if err1 != nil || err2 != nil {
 			err := fmt.Errorf("error updating graph %v %v", err1, err2)
@@ -131,4 +131,5 @@ func init() {
 	tu.clearDB()
 	tu.initUsers()
 	tu.initGraphs()
+	time.Sleep(5 * time.Second)
 }
