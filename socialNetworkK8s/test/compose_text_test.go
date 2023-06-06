@@ -28,7 +28,7 @@ func TestUrl(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "OK", res_url.Ok)
 	assert.Equal(t, 2, len(res_url.Shorturls))
-	
+
 	// get urls
 	shortUrl1 := res_url.Shorturls[0]
 	shortUrl2 := res_url.Shorturls[1]
@@ -59,7 +59,7 @@ func TestText(t *testing.T) {
 	res_text, err := textClient.ProcessText(context.Background(), arg_text)
 	assert.Nil(t, err)
 	assert.Equal(t, "Cannot process empty text.", res_text.Ok)
-	
+
 	arg_text.Text = "Hello World!"
 	res_text, err = textClient.ProcessText(context.Background(), arg_text)
 	assert.Nil(t, err)
@@ -68,7 +68,7 @@ func TestText(t *testing.T) {
 	assert.Equal(t, 0, len(res_text.Urls))
 	assert.Equal(t, "Hello World!", res_text.Text)
 
-	arg_text.Text = 
+	arg_text.Text =
 		"First post! @user_1@user_2 http://www.google.com/q=appleee @user_4 https://www.binggg.com Over!"
 	res_text, err = textClient.ProcessText(context.Background(), arg_text)
 	assert.Nil(t, err)

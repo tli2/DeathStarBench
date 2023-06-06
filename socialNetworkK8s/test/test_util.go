@@ -26,7 +26,8 @@ func StartFowarding(service, testPort, targetPort string) (*exec.Cmd, error) {
 	if err := cmd.Start(); err != nil {
 		return nil,  err
 	}
-	time.Sleep(1*time.Second)
+	time.Sleep(2*time.Second)
+	fmt.Printf("Forwarding process is %v\n", cmd.Process)
 	return cmd, nil
 }
 
@@ -39,7 +40,7 @@ type TestUtil struct {
 func makeTestUtil() (*TestUtil, error) {
 	tune.Init()
 	log.Info().Msg("Start cache and DB connections")
-	cachec := cacheclnt.MakeCacheClnt() 
+	cachec := cacheclnt.MakeCacheClnt()
 	fcmd, err := StartFowarding("mongodb-sn", MONGO_FWD_PORT, "27017")
 	if err != nil {
 		log.Error().Msgf("Cannot forward mongodb port: %v", err)
@@ -123,7 +124,7 @@ func (tu *TestUtil) initGraphs() error {
 func (tu *TestUtil) Close() {
 	tu.mongoSess.Close()
 	tu.fcmd.Process.Kill()
-} 
+}
 
 func init() {
 	tu, _ = makeTestUtil()
@@ -131,5 +132,4 @@ func init() {
 	tu.clearDB()
 	tu.initUsers()
 	tu.initGraphs()
-	time.Sleep(5 * time.Second)
 }

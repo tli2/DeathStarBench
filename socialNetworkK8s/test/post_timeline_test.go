@@ -13,12 +13,12 @@ import (
 )
 
 func IsPostEqual(a, b *postpb.Post) bool {
-	if a.Postid != b.Postid || a.Posttype != b.Posttype || 
-			a.Timestamp != b.Timestamp || a.Text != b.Text || 
-			a.Creator != b.Creator || len(a.Medias) != len(a.Medias) || 
+	if a.Postid != b.Postid || a.Posttype != b.Posttype ||
+			a.Timestamp != b.Timestamp || a.Text != b.Text ||
+			a.Creator != b.Creator || len(a.Medias) != len(a.Medias) ||
 			len(a.Usermentions) != len(b.Usermentions) || len(a.Urls) != len(b.Urls) {
 		return false
-	} 
+	}
 	for idx, _ := range a.Usermentions {
 		if a.Usermentions[idx] !=  b.Usermentions[idx] {
 			return false
@@ -42,9 +42,9 @@ func createNPosts(
 	posts := make([]*postpb.Post, N)
 	for i := 0; i < N; i++ {
 		posts[i] = &postpb.Post{
-			Postid: int64(100+i),
+			Postid: basePid + int64(i),
 			Posttype: postpb.POST_TYPE_POST,
-			Timestamp: basePid + int64(i),
+			Timestamp: 100*basePid + int64(i),
 			Creator: userid,
 			Text: fmt.Sprintf("Post Number %v", i+1),
 			Urls: []string{"xxxxx"},
@@ -56,12 +56,12 @@ func createNPosts(
 		assert.Equal(t, "OK", res_store.Ok)
 	}
 	return posts
-} 
+}
 
 func writeTimeline(t *testing.T, tlc tlpb.TimelineClient, post *postpb.Post, userid int64) {
 	arg_write := &tlpb.WriteTimelineRequest{
-		Userid: userid, 
-		Postid: post.Postid, 
+		Userid: userid,
+		Postid: post.Postid,
 		Timestamp: post.Timestamp}
 	res_write, err := tlc.WriteTimeline(context.Background(), arg_write)
 	assert.Nil(t, err)
@@ -161,7 +161,7 @@ func TestTimeline(t *testing.T) {
 
 	// create and store N posts
 	NPOST, userid := 4, int64(200)
-	posts := createNPosts(t, postClient, NPOST, userid, 10000)
+	posts := createNPosts(t, postClient, NPOST, userid, 100)
 
 	// write posts 0 to N/2 to timeline
 	for i := 0; i < NPOST/2; i++ {
@@ -213,11 +213,11 @@ func TestHome(t *testing.T) {
 	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
 	homeClient := homepb.NewHomeClient(homeConn)
 	assert.NotNil(t, homeClient)
-	
+
 	// create and store N posts
 	NPOST, userid := 3, int64(1)
-	posts := createNPosts(t, postClient, NPOST, userid, 20000)
-	
+	posts := createNPosts(t, postClient, NPOST, userid, 200)
+
 	// write to home timelines and check
 	for i := 0; i < NPOST; i++ {
 		writeHomeTimeline(t, homeClient, posts[i], userid)
