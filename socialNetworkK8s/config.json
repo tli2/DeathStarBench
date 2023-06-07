@@ -4,6 +4,7 @@
   "FrontendPort": "5000",
   "CachedPort": "8091",
   "GeoPort": "8083",
+  "ComposePort":"8081",
   "MediaPort": "8082",
   "UserPort": "8084",
   "GraphPort": "8085",

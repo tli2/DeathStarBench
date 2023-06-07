@@ -26,8 +26,7 @@ func StartFowarding(service, testPort, targetPort string) (*exec.Cmd, error) {
 	if err := cmd.Start(); err != nil {
 		return nil,  err
 	}
-	time.Sleep(2*time.Second)
-	fmt.Printf("Forwarding process is %v\n", cmd.Process)
+	time.Sleep(1*time.Second)
 	return cmd, nil
 }
 

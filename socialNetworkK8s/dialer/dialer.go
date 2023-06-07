@@ -40,7 +40,7 @@ func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.Clien
 
 	dialopts := []grpc.DialOption{
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			//Time:                24 * time.Hour,
+			Time:                1 * time.Hour,
 			Timeout:             120 * time.Second,
 			PermitWithoutStream: true,
 		}),
