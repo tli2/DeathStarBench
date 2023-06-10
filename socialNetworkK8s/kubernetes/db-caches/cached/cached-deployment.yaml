@@ -37,9 +37,9 @@ spec:
             - containerPort: 5555
           resources:
             requests:
-              cpu: 1900m
+              cpu: 1000m
             limits:
-              cpu: 4000m
+              cpu: 2000m
           env:
             - name: POD_IP_ADDR
               valueFrom:
