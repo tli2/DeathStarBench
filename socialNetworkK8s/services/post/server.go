@@ -224,6 +224,7 @@ func postToBson(post *proto.Post) *PostBson {
 		Posttype: int32(post.Posttype),
 		Timestamp: post.Timestamp,
 		Creator: post.Creator,
+		CreatorUname: post.Creatoruname,
 		Text: post.Text,
 		Usermentions: post.Usermentions,
 		Medias: post.Medias,
@@ -237,6 +238,7 @@ func bsonToPost(bson *PostBson) *proto.Post {
 		Posttype: proto.POST_TYPE(bson.Posttype),
 		Timestamp: bson.Timestamp,
 		Creator: bson.Creator,
+		Creatoruname: bson.CreatorUname,
 		Text: bson.Text,
 		Usermentions: bson.Usermentions,
 		Medias: bson.Medias,
@@ -249,6 +251,7 @@ type PostBson struct {
 	Posttype int32       `bson:posttype`
 	Timestamp int64      `bson:timestamp`
 	Creator int64        `bson:creator`
+	CreatorUname string  `bson:creatoruname`
 	Text string          `bson:text`
 	Usermentions []int64 `bson:usermentions`
 	Medias []int64       `bson:medias`

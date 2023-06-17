@@ -11,7 +11,8 @@ service Compose {
 }
 
 message ComposePostRequest {
-	int64          userid = 2;
+	int64          userid = 1;
+	string         username = 2;
 	string         text = 3;
 	post.POST_TYPE posttype = 4;
     repeated int64 mediaids = 5;

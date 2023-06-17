@@ -151,10 +151,6 @@ func (csrv *ComposeSrv) Run() error {
 		return fmt.Errorf("dialer error: %v", err)
 	}
 	csrv.homec = homepb.NewHomeClient(homeConn)
-
-
-
-
 	csrv.uuid = uuid.New().String()
 	csrv.sid = rand.Int31n(536870912) // 2^29
 	opts := []grpc.ServerOption{
@@ -225,6 +221,7 @@ func (csrv *ComposeSrv) ComposePost(
 		Posttype: req.Posttype,
 		Timestamp: timestamp,
 		Creator: req.Userid,
+		Creatoruname: req.Username,
 		Text: textRes.Text,
 		Usermentions: textRes.Usermentions,
 		Urls: textRes.Urls,

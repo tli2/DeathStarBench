@@ -58,7 +58,7 @@ func main() {
 	}
 	log.Info().Msg("Consul agent initialized")
 
-	srv := &frontend.Server{
+	fsrv := &frontend.FrontendSrv{
 		Registry: registry,
 		Tracer:   tracer,
 		IpAddr:   serv_ip,
@@ -66,5 +66,5 @@ func main() {
 	}
 
 	log.Info().Msg("Starting server...")
-	log.Fatal().Msg(srv.Run().Error())
+	log.Fatal().Msg(fsrv.Run().Error())
 }
