@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"strconv"
-	geo "socialnetworkk8/services/geo/proto"
 	userpb "socialnetworkk8/services/user/proto"
 	composepb "socialnetworkk8/services/compose/proto"
 	tlpb "socialnetworkk8/services/timeline/proto"
@@ -19,8 +18,6 @@ import (
 	"socialnetworkk8/services/compose"
 	"socialnetworkk8/services/timeline"
 	"socialnetworkk8/services/home"
-	profile "socialnetworkk8/services/profile/proto"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"socialnetworkk8/dialer"
 	"socialnetworkk8/registry"
@@ -41,7 +38,6 @@ var (
 
 // Server implements frontend service
 type FrontendSrv struct {
-	geoClient geo.GeoClient
 	userc     userpb.UserClient
 	tlc       tlpb.TimelineClient
 	homec     homepb.HomeClient
@@ -59,13 +55,8 @@ func (s *FrontendSrv) Run() error {
 	if s.Port == 0 {
 		return fmt.Errorf("Server port must be set")
 	}
-
-	zerolog.SetGlobalLevel(zerolog.Disabled)
-
+	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	log.Info().Msg("Initializing gRPC clients...")
-	if err := s.initGeo("srv-geo"); err != nil {
-		return err
-	}
 	// user client
 	userConn, err := dialer.Dial(
 		user.USER_SRV_NAME,
@@ -112,7 +103,6 @@ func (s *FrontendSrv) Run() error {
 	//mux := tracing.NewServeMux(s.Tracer)
 	mux := http.NewServeMux()
 	mux.Handle("/echo", http.HandlerFunc(s.echoHandler))
-	mux.Handle("/geo", http.HandlerFunc(s.geoHandler))
 	mux.Handle("/user", http.HandlerFunc(s.userHandler))
 	mux.Handle("/compose", http.HandlerFunc(s.composeHandler))
 	mux.Handle("/timeline", http.HandlerFunc(s.timelineHandler))
@@ -137,19 +127,6 @@ func (s *FrontendSrv) Run() error {
 	}
 }
 
-func (s *FrontendSrv) initGeo(name string) error {
-	conn, err := dialer.Dial(
-		name,
-		s.Registry.Client,
-		dialer.WithTracer(s.Tracer),
-	)
-	if err != nil {
-		return fmt.Errorf("dialer error: %v", err)
-	}
-	s.geoClient = geo.NewGeoClient(conn)
-	return nil
-}
-
 func (s *FrontendSrv) echoHandler(w http.ResponseWriter, r *http.Request) {
 	if s.record {
 		defer s.p.TptTick(1.0)
@@ -165,42 +142,6 @@ func (s *FrontendSrv) echoHandler(w http.ResponseWriter, r *http.Request) {
 
 	res := map[string]interface{}{
 		"message": "Echo: " + msg,
-	}
-
-	json.NewEncoder(w).Encode(res)
-}
-
-func (s *FrontendSrv) geoHandler(w http.ResponseWriter, r *http.Request) {
-	if s.record {
-		defer s.p.TptTick(1.0)
-	}
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	ctx := r.Context()
-
-	sLat, sLon := r.URL.Query().Get("lat"), r.URL.Query().Get("lon")
-	if sLat == "" || sLon == "" {
-		http.Error(w, "Please specify location params", http.StatusBadRequest)
-		return
-	}
-	Lat, _ := strconv.ParseFloat(sLat, 32)
-	lat := float32(Lat)
-	Lon, _ := strconv.ParseFloat(sLon, 32)
-	lon := float32(Lon)
-
-	geores, err := s.geoClient.Nearby(ctx, &geo.Request{
-		Lat: lat,
-		Lon: lon,
-	})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	str := "Geo!"
-
-	res := map[string]interface{}{
-		"message": str,
-		"length": strconv.Itoa(len(geores.HotelIds)),
 	}
 
 	json.NewEncoder(w).Encode(res)
@@ -392,52 +333,6 @@ func (s *FrontendSrv) saveResultsHandler(w http.ResponseWriter, r *http.Request)
 	json.NewEncoder(w).Encode(res)
 }
 
-// return a geoJSON response that allows google map to plot points directly on map
-// https://developers.google.com/maps/documentation/javascript/datalayer#sample_geojson
-func geoJSONResponse(hs []*profile.Hotel) map[string]interface{} {
-	fs := []interface{}{}
-
-	for _, h := range hs {
-		fs = append(fs, map[string]interface{}{
-			"type": "Feature",
-			"id":   h.Id,
-			"properties": map[string]string{
-				"name":         h.Name,
-				"phone_number": h.PhoneNumber,
-			},
-			"geometry": map[string]interface{}{
-				"type": "Point",
-				"coordinates": []float32{
-					h.Address.Lon,
-					h.Address.Lat,
-				},
-			},
-		})
-	}
-
-	return map[string]interface{}{
-		"type":     "FeatureCollection",
-		"features": fs,
-	}
-}
-
-func checkDataFormat(date string) bool {
-	if len(date) != 10 {
-		return false
-	}
-	for i := 0; i < 10; i++ {
-		if i == 4 || i == 7 {
-			if date[i] != '-' {
-				return false
-			}
-		} else {
-			if date[i] < '0' || date[i] > '9' {
-				return false
-			}
-		}
-	}
-	return true
-}
 
 func parsePostTypeString(str string) (postpb.POST_TYPE) {
     c, ok := posttypesMap[strings.ToLower(str)]
