@@ -19,10 +19,11 @@ import (
 	"socialnetworkk8/services/timeline"
 	"socialnetworkk8/services/home"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"socialnetworkk8/dialer"
 	"socialnetworkk8/registry"
 	"socialnetworkk8/tls"
-	//"socialnetworkk8/tracing"
+	"socialnetworkk8/tracing"
 	"github.com/opentracing/opentracing-go"
 )
 
@@ -48,6 +49,8 @@ type FrontendSrv struct {
 	Tracer    opentracing.Tracer
 	Registry  *registry.Client
 	p         *Perf
+	uCounter  *tracing.Counter
+	iCounter  *tracing.Counter
 }
 
 // Run the server
@@ -55,7 +58,6 @@ func (s *FrontendSrv) Run() error {
 	if s.Port == 0 {
 		return fmt.Errorf("Server port must be set")
 	}
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	log.Info().Msg("Initializing gRPC clients...")
 	// user client
 	userConn, err := dialer.Dial(
@@ -93,13 +95,15 @@ func (s *FrontendSrv) Run() error {
 		return fmt.Errorf("dialer error: %v", err)
 	}
 	s.composec = composepb.NewComposeClient(composeConn)
-
-
+	s.uCounter = tracing.MakeCounter("User")
+	s.iCounter = tracing.MakeCounter("User-Inner")
 	s.p = MakePerf("hotelperf/k8s", "hotel")
 
 	log.Info().Msg("Successfull")
 
 	log.Trace().Msg("frontend before mux")
+
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	//mux := tracing.NewServeMux(s.Tracer)
 	mux := http.NewServeMux()
 	mux.Handle("/echo", http.HandlerFunc(s.echoHandler))
@@ -138,7 +142,7 @@ func (s *FrontendSrv) echoHandler(w http.ResponseWriter, r *http.Request) {
 	// grab locale from query params or default to en
 	msg := r.URL.Query().Get("msg")
 
-	log.Info().Msg(fmt.Sprintf("echoHandler msg %v", msg))
+	log.Debug().Msg(fmt.Sprintf("echoHandler msg %v", msg))
 
 	res := map[string]interface{}{
 		"message": "Echo: " + msg,
@@ -148,13 +152,14 @@ func (s *FrontendSrv) echoHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *FrontendSrv) userHandler(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
 	if s.record {
 		defer s.p.TptTick(1.0)
 	}
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	rawQuery, _ := url.QueryUnescape(r.URL.RawQuery)
 	urlQuery, _ := url.ParseQuery(rawQuery)
-	log.Info().Msgf("user request %v\n", rawQuery)
+	log.Debug().Msgf("user request %v\n", rawQuery)
 
 	username, password := urlQuery.Get("username"), urlQuery.Get("password")
 	if username == "" || password == "" {
@@ -162,8 +167,10 @@ func (s *FrontendSrv) userHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Check username and password
+	t1 := time.Now()
 	res, err := s.userc.Login(
 		r.Context(), &userpb.LoginRequest{Username: username,Password: password})
+	s.iCounter.AddTimeSince(t1)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -174,6 +181,7 @@ func (s *FrontendSrv) userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	reply := map[string]interface{}{"message": str}
 	json.NewEncoder(w).Encode(reply)
+	s.uCounter.AddTimeSince(t0)
 }
 
 func (s *FrontendSrv) composeHandler(w http.ResponseWriter, r *http.Request) {
@@ -183,7 +191,7 @@ func (s *FrontendSrv) composeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	rawQuery, _ := url.QueryUnescape(r.URL.RawQuery)
 	urlQuery, _ := url.ParseQuery(rawQuery)
-	log.Info().Msgf("Compose request: %v\n", urlQuery)
+	log.Debug().Msgf("Compose request: %v\n", urlQuery)
 	username, useridstr := urlQuery.Get("username"), urlQuery.Get("userid")
 	ctx := r.Context()
 	var userid int64
@@ -252,7 +260,7 @@ func (s *FrontendSrv) timelineHandlerInner(w http.ResponseWriter, r *http.Reques
 	if isHome {
 		debugInfo = "Home timeline request"
 	}
-	log.Info().Msgf("%s: %v\n", debugInfo, urlQuery)
+	log.Debug().Msgf("%s: %v\n", debugInfo, urlQuery)
 	useridstr, startstr, stopstr := 
 		urlQuery.Get("userid"), urlQuery.Get("start"),urlQuery.Get("stop")
 	var err, err1, err2, err3 error
@@ -308,7 +316,7 @@ func (s *FrontendSrv) startRecordingHandler(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	log.Info().Msg("Start recording!")
+	log.Debug().Msg("Start recording!")
 
 	str := "Started recording!"
 

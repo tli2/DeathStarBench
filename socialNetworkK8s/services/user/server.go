@@ -17,7 +17,7 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"github.com/google/uuid"
-	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
+	//"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	"socialnetworkk8/registry"
 	"socialnetworkk8/tune"
 	"socialnetworkk8/services/user/proto"
@@ -25,6 +25,7 @@ import (
 	"socialnetworkk8/tls"
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -52,6 +53,9 @@ type UserSrv struct {
 	sid          int32 // sid is a random number between 0 and 2^30
 	ucount       int32 //This server may overflow with over 2^31 users
     mu           sync.Mutex
+	dbCounter    *tracing.Counter
+	cacheCounter *tracing.Counter
+	loginCounter *tracing.Counter
 }
 
 func MakeUserSrv() *UserSrv {
@@ -116,6 +120,9 @@ func MakeUserSrv() *UserSrv {
 		cachec:       cachec,
 		mongoSess:    session,
 		mongoCo:      collection,
+		dbCounter:    tracing.MakeCounter("DB"),
+		cacheCounter: tracing.MakeCounter("Cache"),
+		loginCounter: tracing.MakeCounter("Login"),
 	}
 }
 
@@ -124,7 +131,6 @@ func (usrv *UserSrv) Run() error {
 	if usrv.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
 	usrv.uuid = uuid.New().String()
 	usrv.sid = rand.Int31n(536870912) // 2^29
 	opts := []grpc.ServerOption{
@@ -134,9 +140,9 @@ func (usrv *UserSrv) Run() error {
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
 		}),
-		grpc.UnaryInterceptor(
-			otgrpc.OpenTracingServerInterceptor(usrv.Tracer),
-		),
+		//grpc.UnaryInterceptor(
+		//	otgrpc.OpenTracingServerInterceptor(usrv.Tracer),
+		//),
 	}
 
 	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
@@ -163,6 +169,7 @@ func (usrv *UserSrv) Run() error {
 		return fmt.Errorf("failed register: %v", err)
 	}
 	log.Info().Msg("Successfully registered in consul")
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	return grpcSrv.Serve(lis)
 }
 
@@ -174,7 +181,7 @@ func (usrv *UserSrv) Shutdown() {
 
 func (usrv *UserSrv) CheckUser(
 		ctx context.Context, req *proto.CheckUserRequest) (*proto.CheckUserResponse, error) {
-	log.Info().Msgf("Checking user at %v: %v", usrv.sid, req.Usernames)
+	log.Debug().Msgf("Checking user at %v: %v", usrv.sid, req.Usernames)
 	userids := make([]int64, len(req.Usernames))
 	res := &proto.CheckUserResponse{}
 	res.Ok = "No"
@@ -200,7 +207,7 @@ func (usrv *UserSrv) CheckUser(
 
 func (usrv *UserSrv) RegisterUser(
 		ctx context.Context, req *proto.RegisterUserRequest) (*proto.UserResponse, error) {
-	log.Info().Msgf("Register user at %v: %v", usrv.sid, req)
+	log.Debug().Msgf("Register user at %v: %v", usrv.sid, req)
 	res := &proto.UserResponse{}
 	res.Ok = "No"
 	user, err := usrv.getUserbyUname(ctx, req.Username)
@@ -230,7 +237,8 @@ func (usrv *UserSrv) RegisterUser(
 
 func (usrv *UserSrv) Login(
 		ctx context.Context, req *proto.LoginRequest) (*proto.UserResponse, error) {
-	log.Info().Msgf("User login with %v: %v", usrv.sid, req)
+	t0 := time.Now()
+	log.Debug().Msgf("User login with %v: %v", usrv.sid, req)
 	res := &proto.UserResponse{}
 	res.Ok = "Login Failure."
 	user, err := usrv.getUserbyUname(ctx, req.Username)
@@ -241,26 +249,33 @@ func (usrv *UserSrv) Login(
 		res.Ok = USER_QUERY_OK
 		res.Userid = user.Userid
 	}
+	usrv.loginCounter.AddTimeSince(t0)
 	return res, nil
 }
 
 func (usrv *UserSrv) getUserbyUname(ctx context.Context, username string) (*User, error) {
 	key := USER_CACHE_PREFIX + username
 	user := &User{}
-	if userItem, err := usrv.cachec.Get(ctx, key); err != nil {
+	t0 := time.Now()
+	userItem, err := usrv.cachec.Get(ctx, key)
+	usrv.cacheCounter.AddTimeSince(t0)
+	if err != nil {
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("User %v cache miss", key)
+		log.Debug().Msgf("User %v cache miss", key)
 		var users []User
-		if err = usrv.mongoCo.Find(&bson.M{"username": username}).All(&users); err != nil {
+		t1 := time.Now()
+		err = usrv.mongoCo.Find(&bson.M{"username": username}).All(&users)
+		usrv.dbCounter.AddTimeSince(t1)
+		if  err != nil {
 			return nil, err
 		} 
 		if len(users) == 0 {
 			return nil, nil
 		}
 		user = &users[0]
-		log.Info().Msgf("Found user %v in DB: %v", username, user)
+		log.Debug().Msgf("Found user %v in DB: %v", username, user)
 		encodedUser, err := json.Marshal(user)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
@@ -268,7 +283,7 @@ func (usrv *UserSrv) getUserbyUname(ctx context.Context, username string) (*User
 		}
 		usrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedUser})
 	} else {
-		log.Info().Msgf("Found user %v in cache!", username)
+		log.Debug().Msgf("Found user %v in cache!", username)
 		json.Unmarshal(userItem.Value, user)
 	}
 	return user, nil
@@ -292,3 +307,4 @@ func (usrv *UserSrv) incCountSafe() int32 {
 func (usrv *UserSrv) getNextUserId() int64 {
 	return int64(usrv.sid)*1e10 + int64(usrv.incCountSafe())
 }
+
