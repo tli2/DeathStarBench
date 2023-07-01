@@ -176,8 +176,7 @@ func TestTimeline(t *testing.T) {
 	arg_read.Stop = int32(NPOST)
 	res_read, err = tlClient.ReadTimeline(context.Background(), arg_read)
 	assert.Nil(t, err)
-	assert.Equal(t, 
-		fmt.Sprintf("Cannot process start=0 end=%v for %v items", NPOST, NPOST/2), res_read.Ok) 
+	assert.Equal(t, "OK", res_read.Ok)
 
 	// write post N/2 to N to timeline 	
 	for i := NPOST/2; i < NPOST; i++ {

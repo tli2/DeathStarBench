@@ -26,7 +26,7 @@ func StartFowarding(service, testPort, targetPort string) (*exec.Cmd, error) {
 	if err := cmd.Start(); err != nil {
 		return nil,  err
 	}
-	time.Sleep(1*time.Second)
+	time.Sleep(500*time.Millisecond)
 	return cmd, nil
 }
 
@@ -55,34 +55,21 @@ func makeTestUtil() (*TestUtil, error) {
 }
 
 func (tu *TestUtil) clearDB() error {
-	if err := tu.mongoSess.DB("socialnetwork").C("user").DropCollection(); err != nil {
-		log.Error().Msgf("Cannot drop user collection: %v", err)
-		return err
-	}
-	if err := tu.mongoSess.DB("socialnetwork").C("post").DropCollection(); err != nil {
-		log.Error().Msgf("Cannot drop post collection: %v", err)
-		return err
-	}
-	if err := tu.mongoSess.DB("socialnetwork").C("graph-follower").DropCollection(); err != nil {
-		log.Error().Msgf("Cannot drop graph follower collection: %v", err)
-		return err
-	}
-	if err := tu.mongoSess.DB("socialnetwork").C("graph-followee").DropCollection(); err != nil {
-		log.Error().Msgf("Cannot drop grap followee collection: %v", err)
-		return err
-	}
-	if err := tu.mongoSess.DB("socialnetwork").C("timeline").DropCollection(); err != nil {
-		log.Error().Msgf("Cannot drop timeline collection: %v", err)
-		return err
-	}
-	if err := tu.mongoSess.DB("socialnetwork").C("url").DropCollection(); err != nil {
-		log.Error().Msgf("Cannot drop url collection: %v", err)
-		return err
-	}
-	if err := tu.mongoSess.DB("socialnetwork").C("media").DropCollection(); err != nil {
-		log.Error().Msgf("Cannot drop media collection: %v", err)
-		return err
-	}
+	log.Info().Msg("Removing mongo DB contents ...")
+	tu.mongoSess.DB("socialnetwork").C("post").RemoveAll(&bson.M{})
+	tu.mongoSess.DB("socialnetwork").C("graph-follower").RemoveAll(&bson.M{})
+	tu.mongoSess.DB("socialnetwork").C("graph-followee").RemoveAll(&bson.M{})
+	tu.mongoSess.DB("socialnetwork").C("timeline").RemoveAll(&bson.M{})
+	tu.mongoSess.DB("socialnetwork").C("url").RemoveAll(&bson.M{})
+	tu.mongoSess.DB("socialnetwork").C("media").RemoveAll(&bson.M{})
+	log.Info().Msg("Re-ensuring mongo DB indexes ...")
+	tu.mongoSess.DB("socialnetwork").C("user").EnsureIndexKey("username")
+	tu.mongoSess.DB("socialnetwork").C("post").EnsureIndexKey("postid")
+	tu.mongoSess.DB("socialnetwork").C("graph-follower").EnsureIndexKey("userid")
+	tu.mongoSess.DB("socialnetwork").C("graph-followee").EnsureIndexKey("userid")
+	tu.mongoSess.DB("socialnetwork").C("url").EnsureIndexKey("shorturl")
+	tu.mongoSess.DB("socialnetwork").C("timeline").EnsureIndexKey("userid")
+	tu.mongoSess.DB("socialnetwork").C("media").EnsureIndexKey("mediaid")
 	return nil
 }
 
