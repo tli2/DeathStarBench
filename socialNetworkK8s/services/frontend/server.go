@@ -221,12 +221,24 @@ func (s *FrontendSrv) composeHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	// compose a post
-	text, posttype := urlQuery.Get("text"), urlQuery.Get("posttype")
+	text, posttype, mediastr := urlQuery.Get("text"), urlQuery.Get("posttype"), urlQuery.Get("media")
+	mediaids := make([]int64, 0)
+	if mediastr != "" {
+		for _, idstr := range strings.Split(mediastr, ",") {
+			mediaid, err := strconv.ParseInt(idstr, 10, 64)
+			if err != nil {
+				log.Info().Msgf("Cannot parse media: %v", idstr)
+			} else {
+				mediaids = append(mediaids, mediaid)
+			}
+		}
+	}
 	res, err := s.composec.ComposePost(ctx, &composepb.ComposePostRequest{
 		Userid: userid,
 		Username: username,
 		Text: text,
 		Posttype: parsePostTypeString(posttype),
+		Mediaids: mediaids,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
