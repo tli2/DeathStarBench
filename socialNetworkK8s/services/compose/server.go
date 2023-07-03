@@ -31,6 +31,7 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -56,6 +57,7 @@ type ComposeSrv struct {
 	sid          int32 // sid is a random number between 0 and 2^30
 	pcount       int32 //This server may overflow with over 2^31 composes
     mu           sync.Mutex
+	cCounter     *tracing.Counter
 }
 
 func MakeComposeSrv() *ComposeSrv {
@@ -105,6 +107,7 @@ func MakeComposeSrv() *ComposeSrv {
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
+		cCounter:     tracing.MakeCounter("Compose-Post"),
 	}
 }
 
@@ -113,7 +116,7 @@ func (csrv *ComposeSrv) Run() error {
 	if csrv.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	log.Info().Msg("Initializing gRPC clients...")
 	textConn, err := dialer.Dial(
@@ -199,6 +202,8 @@ func (csrv *ComposeSrv) Shutdown() {
 
 func (csrv *ComposeSrv) ComposePost(
 		ctx context.Context, req *proto.ComposePostRequest) (*proto.ComposePostResponse, error) {
+	t0 := time.Now()
+	defer csrv.cCounter.AddTimeSince(t0)
 	res := &proto.ComposePostResponse{Ok: "No"}
 	timestamp := time.Now().UnixNano()
 	if req.Text == "" {
@@ -227,7 +232,7 @@ func (csrv *ComposeSrv) ComposePost(
 		Urls: textRes.Urls,
 		Medias: req.Mediaids,
 	}
-	log.Info().Msgf("composing post: %v", newPost)
+	log.Debug().Msgf("composing post: %v", newPost)
 	
 	// concurrently add post to storage and timelines
 	var wg sync.WaitGroup

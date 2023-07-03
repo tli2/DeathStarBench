@@ -26,6 +26,7 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -49,6 +50,8 @@ type TimelineSrv struct {
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
+	wCounter     *tracing.Counter
+	rCounter     *tracing.Counter
 }
 
 func MakeTimelineSrv() *TimelineSrv {
@@ -107,6 +110,8 @@ func MakeTimelineSrv() *TimelineSrv {
 		cachec:       cachec,
 		mongoSess:    session,
 		mongoCo:      collection,
+		wCounter:     tracing.MakeCounter("Write-Timeline"),
+		rCounter:     tracing.MakeCounter("Read-Timeline"),
 	}
 }
 
@@ -116,7 +121,7 @@ func (tlsrv *TimelineSrv) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Info().Msg("Initializing gRPC clients...")
 	conn, err := dialer.Dial(
 		post.POST_SRV_NAME,
@@ -167,6 +172,8 @@ func (tlsrv *TimelineSrv) Run() error {
 func (tlsrv *TimelineSrv) WriteTimeline(
 		ctx context.Context, req *proto.WriteTimelineRequest) (
 		*proto.WriteTimelineResponse, error) {
+	t0 := time.Now()
+	defer tlsrv.wCounter.AddTimeSince(t0)
 	res := &proto.WriteTimelineResponse{Ok: "No"}
 	_, err := tlsrv.mongoCo.Upsert(
 		&bson.M{"userid": req.Userid}, 
@@ -185,6 +192,8 @@ func (tlsrv *TimelineSrv) WriteTimeline(
 func (tlsrv *TimelineSrv) ReadTimeline(
 		ctx context.Context, req *proto.ReadTimelineRequest) (
 		*proto.ReadTimelineResponse, error) {
+	t0 := time.Now()
+	defer tlsrv.rCounter.AddTimeSince(t0)
 	res := &proto.ReadTimelineResponse{Ok: "No"}
 	timeline, err := tlsrv.getUserTimeline(ctx, req.Userid)
 	if err != nil {
@@ -223,7 +232,7 @@ func (tlsrv *TimelineSrv) getUserTimeline(ctx context.Context, userid int64) (*T
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("Timeline %v cache miss", key)
+		log.Debug().Msgf("Timeline %v cache miss", key)
 		var timelines []Timeline
 		if err = tlsrv.mongoCo.Find(&bson.M{"userid": userid}).All(&timelines); err != nil {
 			return nil, err
@@ -232,7 +241,7 @@ func (tlsrv *TimelineSrv) getUserTimeline(ctx context.Context, userid int64) (*T
 			return nil, nil
 		}
 		timeline = &timelines[0]
-		log.Info().Msgf("Found timeline %v in DB: %v", userid, timeline)
+		log.Debug().Msgf("Found timeline %v in DB: %v", userid, timeline)
 		encodedTimeline, err := json.Marshal(timeline)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
@@ -240,7 +249,7 @@ func (tlsrv *TimelineSrv) getUserTimeline(ctx context.Context, userid int64) (*T
 		}
 		tlsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedTimeline})
 	} else {
-		log.Info().Msgf("Found timeline %v in cache!", userid)
+		log.Debug().Msgf("Found timeline %v in cache!", userid)
 		json.Unmarshal(timelineItem.Value, timeline)
 	}
 	return timeline, nil

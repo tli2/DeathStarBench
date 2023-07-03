@@ -27,6 +27,7 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -49,6 +50,7 @@ type TextSrv struct {
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
+	pCounter     *tracing.Counter
 }
 
 func MakeTextSrv() *TextSrv {
@@ -93,6 +95,7 @@ func MakeTextSrv() *TextSrv {
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
+		pCounter:     tracing.MakeCounter("Process Text"),
 	}
 }
 
@@ -102,7 +105,7 @@ func (tsrv *TextSrv) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Info().Msg("Initializing gRPC clients...")
 	userConn, err := dialer.Dial(
 		user.USER_SRV_NAME,
@@ -160,6 +163,8 @@ func (tsrv *TextSrv) Run() error {
 
 func (tsrv *TextSrv) ProcessText(
 		ctx context.Context, req *proto.ProcessTextRequest) (*proto.ProcessTextResponse, error) {
+	t0 := time.Now()
+	defer tsrv.pCounter.AddTimeSince(t0)
 	res := &proto.ProcessTextResponse{}
 	res.Ok = "No. "
 	if req.Text == "" {
@@ -210,17 +215,17 @@ func (tsrv *TextSrv) ProcessText(
 
 	// process mentions
 	for idx, userid := range userRes.Userids {
-		if userid > 0 {
+		if userid >= 0 {
 			res.Usermentions = append(res.Usermentions, userid)
 		} else {
-			log.Info().Msgf("User %v does not exist!", usernames[idx])
+			log.Warn().Msgf("User %v does not exist!", usernames[idx])
 		}
 	}
 
 	// process urls and text
 	if urlIndicesL > 0 { 
 		if urlRes.Ok != url.URL_QUERY_OK {
-			log.Info().Msgf("cannot process urls %v!", extendedUrls)
+			log.Warn().Msgf("cannot process urls %v!", extendedUrls)
 			res.Ok += urlRes.Ok
 			return res, nil
 		} else {

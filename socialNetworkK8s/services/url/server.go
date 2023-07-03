@@ -24,6 +24,7 @@ import (
 	"socialnetworkk8/services/url/proto"
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -65,6 +66,7 @@ type UrlSrv struct {
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
+	cCounter     *tracing.Counter
 }
 
 func MakeUrlSrv() *UrlSrv {
@@ -123,6 +125,7 @@ func MakeUrlSrv() *UrlSrv {
 		cachec:       cachec,
 		mongoSess:    session,
 		mongoCo:      collection,
+		cCounter:     tracing.MakeCounter("Compose-Url"),
 	}
 }
 
@@ -132,7 +135,7 @@ func (urlsrv *UrlSrv) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Info().Msg("Initializing gRPC Server...")
 	urlsrv.uuid = uuid.New().String()
 	opts := []grpc.ServerOption{
@@ -173,7 +176,9 @@ func (urlsrv *UrlSrv) Run() error {
 
 func (urlsrv *UrlSrv) ComposeUrls(
 		ctx context.Context, req *proto.ComposeUrlsRequest) (*proto.ComposeUrlsResponse, error) {
-	log.Info().Msgf("Received compose request %v", req)
+	t0 := time.Now()
+	defer urlsrv.cCounter.AddTimeSince(t0)
+	log.Debug().Msgf("Received compose request %v", req)
 	nUrls := len(req.Extendedurls)
 	res := &proto.ComposeUrlsResponse{}
 	if nUrls == 0 {
@@ -197,7 +202,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 
 func (urlsrv *UrlSrv) GetUrls(
 		ctx context.Context, req *proto.GetUrlsRequest) (*proto.GetUrlsResponse, error) {
-	log.Info().Msgf("Received get request %v", req)
+	log.Debug().Msgf("Received get request %v", req)
 	res := &proto.GetUrlsResponse{}
 	res.Ok = "No."
 	extendedurls := make([]string, len(req.Shorturls))
@@ -223,7 +228,7 @@ func (urlsrv *UrlSrv) GetUrls(
 
 func (urlsrv *UrlSrv) getExtendedUrl(ctx context.Context, shortUrl string) (string, error) {
 	if !strings.HasPrefix(shortUrl, URL_HOSTNAME) {
-		log.Info().Msgf("Url %v does not start with %v!", shortUrl, URL_HOSTNAME)
+		log.Warn().Msgf("Url %v does not start with %v!", shortUrl, URL_HOSTNAME)
 		return "", nil
 	}
 	urlKey := shortUrl[urlPrefixL:]
@@ -233,7 +238,7 @@ func (urlsrv *UrlSrv) getExtendedUrl(ctx context.Context, shortUrl string) (stri
 		if err != memcache.ErrCacheMiss {
 			return "", err
 		}
-		log.Info().Msgf("url %v cache miss", key)
+		log.Debug().Msgf("url %v cache miss", key)
 		var urls []Url
 		if err = urlsrv.mongoCo.Find(&bson.M{"shorturl": urlKey}).All(&urls); err != nil {
 			return "", err
@@ -242,7 +247,7 @@ func (urlsrv *UrlSrv) getExtendedUrl(ctx context.Context, shortUrl string) (stri
 			return "", nil
 		}
 		url = &urls[0]
-		log.Info().Msgf("Found url %v in DB: %v", shortUrl, url)
+		log.Debug().Msgf("Found url %v in DB: %v", shortUrl, url)
 		encodedUrl, err := json.Marshal(url)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
@@ -250,7 +255,7 @@ func (urlsrv *UrlSrv) getExtendedUrl(ctx context.Context, shortUrl string) (stri
 		}
 		urlsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedUrl})
 	} else {
-		log.Info().Msgf("Found url %v in cache!", key)
+		log.Debug().Msgf("Found url %v in cache!", key)
 		json.Unmarshal(urlItem.Value, url)
 	}
 	return url.Extendedurl, nil

@@ -28,6 +28,7 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -50,6 +51,8 @@ type HomeSrv struct {
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
+	wCounter     *tracing.Counter
+	rCounter     *tracing.Counter
 }
 
 func MakeHomeSrv() *HomeSrv {
@@ -97,6 +100,8 @@ func MakeHomeSrv() *HomeSrv {
 		Tracer:       tracer,
 		Registry:     registry,
 		cachec:       cachec,
+		wCounter:     tracing.MakeCounter("Write-Home"),
+		rCounter:     tracing.MakeCounter("Read-Home"),
 	}
 }
 
@@ -105,7 +110,7 @@ func (hsrv *HomeSrv) Run() error {
 	if hsrv.Port == 0 {
 		return fmt.Errorf("server port must be set")
 	}
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	log.Info().Msg("Initializing gRPC clients...")
 	postConn, err := dialer.Dial(
@@ -165,6 +170,8 @@ func (hsrv *HomeSrv) Run() error {
 func (hsrv *HomeSrv) WriteHomeTimeline(
 		ctx context.Context, req *proto.WriteHomeTimelineRequest) (
 		*tlpb.WriteTimelineResponse, error) {
+	t0 := time.Now()
+	defer hsrv.wCounter.AddTimeSince(t0)
 	res := &tlpb.WriteTimelineResponse{Ok: "No"}
 	otherUserIds := make(map[int64]bool, 0)
 	argFollower := &graphpb.GetFollowersRequest{Followeeid: req.Userid}
@@ -178,7 +185,7 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 	for _, mentionid := range req.Usermentionids {
 		otherUserIds[mentionid] = true
 	}
-	log.Info().Msgf("Updating timeline for %v users", len(otherUserIds))
+	log.Debug().Msgf("Updating timeline for %v users", len(otherUserIds))
 	missing := false
 	for userid := range otherUserIds {
 		hometl, err := hsrv.getHomeTimeline(ctx, userid)
@@ -205,6 +212,8 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 
 func (hsrv *HomeSrv) ReadHomeTimeline(
 		ctx context.Context, req *tlpb.ReadTimelineRequest) (*tlpb.ReadTimelineResponse, error) {
+	t0 := time.Now()
+	defer hsrv.rCounter.AddTimeSince(t0)
 	res := &tlpb.ReadTimelineResponse{Ok: "No"}
 	timeline, err := hsrv.getHomeTimeline(ctx, req.Userid)
 	if err != nil {
@@ -240,11 +249,11 @@ func (hsrv *HomeSrv) getHomeTimeline(ctx context.Context, userid int64) (*timeli
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("Home timeline %v cache miss", key)
+		log.Debug().Msgf("Home timeline %v cache miss", key)
 		timeline.Userid = userid
 	} else {
 		json.Unmarshal(timelineItem.Value, timeline)
-		log.Info().Msgf("Found home timeline %v in cache! %v", userid, timeline)
+		log.Debug().Msgf("Found home timeline %v in cache! %v", userid, timeline)
 	}
 	return timeline, nil
 }

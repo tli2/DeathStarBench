@@ -56,6 +56,7 @@ type UserSrv struct {
 	dbCounter    *tracing.Counter
 	cacheCounter *tracing.Counter
 	loginCounter *tracing.Counter
+	checkCounter *tracing.Counter
 }
 
 func MakeUserSrv() *UserSrv {
@@ -123,6 +124,7 @@ func MakeUserSrv() *UserSrv {
 		dbCounter:    tracing.MakeCounter("DB"),
 		cacheCounter: tracing.MakeCounter("Cache"),
 		loginCounter: tracing.MakeCounter("Login"),
+		checkCounter: tracing.MakeCounter("Check-User"),
 	}
 }
 
@@ -181,6 +183,8 @@ func (usrv *UserSrv) Shutdown() {
 
 func (usrv *UserSrv) CheckUser(
 		ctx context.Context, req *proto.CheckUserRequest) (*proto.CheckUserResponse, error) {
+	t0 := time.Now()
+	defer usrv.checkCounter.AddTimeSince(t0)
 	log.Debug().Msgf("Checking user at %v: %v", usrv.sid, req.Usernames)
 	userids := make([]int64, len(req.Usernames))
 	res := &proto.CheckUserResponse{}

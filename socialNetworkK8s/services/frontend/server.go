@@ -51,6 +51,9 @@ type FrontendSrv struct {
 	p         *Perf
 	uCounter  *tracing.Counter
 	iCounter  *tracing.Counter
+	cCounter  *tracing.Counter
+	hCounter  *tracing.Counter
+	tCounter  *tracing.Counter
 }
 
 // Run the server
@@ -95,15 +98,18 @@ func (s *FrontendSrv) Run() error {
 		return fmt.Errorf("dialer error: %v", err)
 	}
 	s.composec = composepb.NewComposeClient(composeConn)
-	s.uCounter = tracing.MakeCounter("User")
+	s.uCounter = tracing.MakeCounter("Front-User")
 	s.iCounter = tracing.MakeCounter("User-Inner")
+	s.hCounter = tracing.MakeCounter("Front-Home")
+	s.tCounter = tracing.MakeCounter("Front-Timeline")
+	s.cCounter = tracing.MakeCounter("Front-Compose")
 	s.p = MakePerf("hotelperf/k8s", "hotel")
 
 	log.Info().Msg("Successfull")
 
 	log.Trace().Msg("frontend before mux")
 
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	//mux := tracing.NewServeMux(s.Tracer)
 	mux := http.NewServeMux()
 	mux.Handle("/echo", http.HandlerFunc(s.echoHandler))
@@ -185,6 +191,8 @@ func (s *FrontendSrv) userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *FrontendSrv) composeHandler(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
+	defer s.cCounter.AddTimeSince(t0)
 	if s.record {
 		defer s.p.TptTick(1.0)
 	}
@@ -253,10 +261,14 @@ func (s *FrontendSrv) composeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *FrontendSrv) timelineHandler(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
+	defer s.tCounter.AddTimeSince(t0)
 	s.timelineHandlerInner(w, r, false)
 }
 
 func (s *FrontendSrv) homeHandler(w http.ResponseWriter, r *http.Request) {
+	t0 := time.Now()
+	defer s.hCounter.AddTimeSince(t0)
 	s.timelineHandlerInner(w, r, true)
 }
 

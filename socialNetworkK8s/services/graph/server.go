@@ -25,6 +25,7 @@ import (
 	userpb "socialnetworkk8/services/user/proto"
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -52,6 +53,7 @@ type GraphSrv struct {
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
+	fCounter     *tracing.Counter
 }
 
 func MakeGraphSrv() *GraphSrv {
@@ -113,6 +115,7 @@ func MakeGraphSrv() *GraphSrv {
 		mongoSess:    session,
 		mongoFlwERCo: followersCo,
 		mongoFlwEECo: followeesCo,
+		fCounter:     tracing.MakeCounter("Get-Follower"),
 	}
 }
 
@@ -122,7 +125,7 @@ func (gsrv *GraphSrv) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Info().Msg("Initializing gRPC clients...")
 	conn, err := dialer.Dial(
 		user.USER_SRV_NAME,
@@ -172,6 +175,8 @@ func (gsrv *GraphSrv) Run() error {
 
 func (gsrv *GraphSrv) GetFollowers(
 		ctx context.Context, req *proto.GetFollowersRequest) (*proto.GraphGetResponse, error) {
+	t0 := time.Now()
+	defer gsrv.fCounter.AddTimeSince(t0)
 	res := &proto.GraphGetResponse{}
 	res.Ok = "No"
 	res.Userids = make([]int64, 0)
@@ -221,7 +226,7 @@ func (gsrv *GraphSrv) updateGraph(
 		*proto.GraphUpdateResponse, error) {
 	res := &proto.GraphUpdateResponse{}
 	res.Ok = "No"
-	log.Info().Msgf("Updating graph. %v follows %v; Add edge? %v", followerid, followeeid, isFollow)
+	log.Debug().Msgf("Updating graph. %v follows %v; Add edge? %v", followerid, followeeid, isFollow)
 	if followerid == followeeid {
 		if isFollow {
 			res.Ok = "Cannot follow self."
@@ -288,7 +293,7 @@ func (gsrv *GraphSrv) getFollowers(ctx context.Context, userid int64) ([]int64, 
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("FollowER %v cache miss", key)
+		log.Debug().Msgf("FollowER %v cache miss", key)
 		var edgeInfos []EdgeInfo
 		if err = gsrv.mongoFlwERCo.Find(&bson.M{"userid": userid}).All(&edgeInfos); err != nil {
 			return nil, err
@@ -297,7 +302,7 @@ func (gsrv *GraphSrv) getFollowers(ctx context.Context, userid int64) ([]int64, 
 			return make([]int64, 0), nil
 		}
 		flwERInfo = &edgeInfos[0]
-		log.Info().Msgf("Found followERs for  %v in DB: %v", userid, flwERInfo)
+		log.Debug().Msgf("Found followERs for  %v in DB: %v", userid, flwERInfo)
 		encodedFlwERInfo, err := json.Marshal(flwERInfo)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
@@ -305,7 +310,7 @@ func (gsrv *GraphSrv) getFollowers(ctx context.Context, userid int64) ([]int64, 
 		}
 		gsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedFlwERInfo})
 	} else {
-		log.Info().Msgf("Found followERs for %v in cache!", userid)
+		log.Debug().Msgf("Found followERs for %v in cache!", userid)
 		json.Unmarshal(followerItem.Value, flwERInfo)
 	}	
 	return flwERInfo.Edges, nil
@@ -318,7 +323,7 @@ func (gsrv *GraphSrv) getFollowees(ctx context.Context, userid int64) ([]int64, 
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("FollowEE %v cache miss", key)
+		log.Debug().Msgf("FollowEE %v cache miss", key)
 		var edgeInfos []EdgeInfo
 		if err = gsrv.mongoFlwEECo.Find(&bson.M{"userid": userid}).All(&edgeInfos); err != nil {
 			return nil, err
@@ -327,7 +332,7 @@ func (gsrv *GraphSrv) getFollowees(ctx context.Context, userid int64) ([]int64, 
 			return make([]int64, 0), nil
 		}
 		flwEEInfo = &edgeInfos[0]
-		log.Info().Msgf("Found followEEs for  %v in DB: %v", userid, flwEEInfo)
+		log.Debug().Msgf("Found followEEs for  %v in DB: %v", userid, flwEEInfo)
 		encodedFlwEEInfo, err := json.Marshal(flwEEInfo)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
@@ -335,7 +340,7 @@ func (gsrv *GraphSrv) getFollowees(ctx context.Context, userid int64) ([]int64, 
 		}
 		gsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedFlwEEInfo})
 	} else {
-		log.Info().Msgf("Found followEEs for %v in cache!", userid)
+		log.Debug().Msgf("Found followEEs for %v in cache!", userid)
 		json.Unmarshal(followeeItem.Value, flwEEInfo)
 	}	
 	return flwEEInfo.Edges, nil

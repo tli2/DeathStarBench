@@ -23,6 +23,7 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	"socialnetworkk8/tracing"
 	"github.com/rs/zerolog/log"
+	"github.com/rs/zerolog"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -45,6 +46,8 @@ type PostSrv struct {
 	Tracer       opentracing.Tracer
 	Port         int
 	IpAddr       string
+	sCounter     *tracing.Counter
+	rCounter     *tracing.Counter
 }
 
 func MakePostSrv() *PostSrv {
@@ -103,6 +106,8 @@ func MakePostSrv() *PostSrv {
 		cachec:       cachec,
 		mongoSess:    session,
 		mongoCo:      collection,
+		sCounter:     tracing.MakeCounter("Store-Post"),
+		rCounter:     tracing.MakeCounter("Read-Post"),
 	}
 }
 
@@ -112,7 +117,7 @@ func (psrv *PostSrv) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	//zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Info().Msg("Initializing gRPC Server...")
 	psrv.uuid = uuid.New().String()
 	opts := []grpc.ServerOption{
@@ -152,6 +157,8 @@ func (psrv *PostSrv) Run() error {
 
 func (psrv *PostSrv) StorePost(
 		ctx context.Context, req *proto.StorePostRequest) (*proto.StorePostResponse, error) {
+	t0 := time.Now()
+	defer psrv.sCounter.AddTimeSince(t0)
 	res := &proto.StorePostResponse{}
 	res.Ok = "No"
 	postBson := postToBson(req.Post)
@@ -165,6 +172,8 @@ func (psrv *PostSrv) StorePost(
 
 func (psrv *PostSrv) ReadPosts(
 		ctx context.Context, req *proto.ReadPostsRequest) (*proto.ReadPostsResponse, error) {
+	t0 := time.Now()
+	defer psrv.rCounter.AddTimeSince(t0)
 	res := &proto.ReadPostsResponse{}
 	res.Ok = "No."
 	posts := make([]*proto.Post, len(req.Postids))
@@ -195,7 +204,7 @@ func (psrv *PostSrv) getPost(ctx context.Context, postid int64) (*PostBson, erro
 		if err != memcache.ErrCacheMiss {
 			return nil, err
 		}
-		log.Info().Msgf("Post %v cache miss", key)
+		log.Debug().Msgf("Post %v cache miss", key)
 		var postBsons []PostBson
 		if err = psrv.mongoCo.Find(&bson.M{"postid": postid}).All(&postBsons); err != nil {
 			return nil, err
@@ -204,7 +213,7 @@ func (psrv *PostSrv) getPost(ctx context.Context, postid int64) (*PostBson, erro
 			return nil, nil
 		}
 		postBson = &postBsons[0]
-		log.Info().Msgf("Found post %v in DB: %v", postid, postBson)
+		log.Debug().Msgf("Found post %v in DB: %v", postid, postBson)
 		encodedPost, err := json.Marshal(postBson)	
 		if err != nil {
 			log.Fatal().Msg(err.Error())
@@ -212,7 +221,7 @@ func (psrv *PostSrv) getPost(ctx context.Context, postid int64) (*PostBson, erro
 		}
 		psrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedPost})
 	} else {
-		log.Info().Msgf("Found post %v in cache!", postid)
+		log.Debug().Msgf("Found post %v in cache!", postid)
 		json.Unmarshal(postItem.Value, postBson)
 	}
 	return postBson, nil
