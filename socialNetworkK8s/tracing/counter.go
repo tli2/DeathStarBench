@@ -7,6 +7,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const N = 1000
+
 type Counter struct {
 	mu    sync.Mutex
 	count int64
@@ -18,7 +20,7 @@ type Counter struct {
 }
 
 func MakeCounter(str string) *Counter {
-	return &Counter{label: str, count: 0, sum: 0, ssum: 0, min: 10000000, max: 0}
+	return &Counter{label: str, count: 0, sum: 0, ssum: 0, min: 100000000, max: 0}
 }
 
 func (c *Counter) AddOne(val int64) {
@@ -33,7 +35,7 @@ func (c *Counter) AddOne(val int64) {
 	if val < c.min {
 		c.min = val
 	}
-	if c.count == 1000 {
+	if c.count == N {
 		avg := c.sum / c.count
 		std := math.Sqrt(float64(c.ssum/c.count - avg*avg))
 		log.Info().Msgf(
@@ -42,7 +44,7 @@ func (c *Counter) AddOne(val int64) {
 		c.sum = 0
 		c.ssum = 0
 		c.max = 0
-		c.min = 10000000
+		c.min = 100000000
 	}
 }
 

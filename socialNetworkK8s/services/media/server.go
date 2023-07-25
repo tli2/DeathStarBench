@@ -162,7 +162,7 @@ func (msrv *MediaSrv) StoreMedia(
 	mId := msrv.getNextMediaId()
 	media := &Media{mId, req.Mediatype, req.Mediadata}
 	if err := msrv.mongoCo.Insert(media); err != nil {
-		log.Fatal().Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return res, err
 	}
 	res.Ok = MEDIA_QUERY_OK
@@ -216,7 +216,7 @@ func (msrv *MediaSrv) getMedia(ctx context.Context, mediaid int64) (*Media, erro
 		log.Info().Msgf("Found media %v in DB: %v", mediaid, media)
 		encodedMedia, err := json.Marshal(media)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
 		msrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedMedia})

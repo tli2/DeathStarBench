@@ -34,18 +34,21 @@ func WithTracer(tracer opentracing.Tracer) DialOption {
 //		return grpc.WithBalancer(grpc.RoundRobin(r)), nil
 //	}
 //}
+func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.ClientConn, error) {
+	return Diall(0, name, registry, opts ...)
+}
+
 
 // Dial returns a load balanced grpc client conn with tracing interceptor
-func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.ClientConn, error) {
-
+func Diall(label int, name string, registry *consul.Client, opts ...DialOption) (*grpc.ClientConn, error) {
 	dialopts := []grpc.DialOption{
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time:                1 * time.Hour,
 			Timeout:             120 * time.Second,
 			PermitWithoutStream: true,
 		}),
-		grpc.WithReadBufferSize(65536),
-		grpc.WithWriteBufferSize(65536),
+		grpc.WithReadBufferSize(6553600+label),
+		grpc.WithWriteBufferSize(6553600+label),
 	}
 	if tlsopt := tls.GetDialOpt(); tlsopt != nil {
 		dialopts = append(dialopts, tlsopt)
@@ -68,6 +71,9 @@ func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.Clien
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to dial 1 %s: %v", name, err)
+		}
+		if len(srvs) > 1 {
+			fmt.Printf("All srvs: %v\n", srvs)
 		}
 
 		i := len(srvs) - 1

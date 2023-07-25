@@ -109,7 +109,7 @@ func (s *FrontendSrv) Run() error {
 
 	log.Trace().Msg("frontend before mux")
 
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	//mux := tracing.NewServeMux(s.Tracer)
 	mux := http.NewServeMux()
 	mux.Handle("/echo", http.HandlerFunc(s.echoHandler))
@@ -249,6 +249,7 @@ func (s *FrontendSrv) composeHandler(w http.ResponseWriter, r *http.Request) {
 		Mediaids: mediaids,
 	})
 	if err != nil {
+		log.Info().Msgf("Error from compose: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

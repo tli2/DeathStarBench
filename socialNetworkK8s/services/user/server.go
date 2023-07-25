@@ -231,7 +231,7 @@ func (usrv *UserSrv) RegisterUser(
 		Firstname: req.Firstname,
 		Password: pswd_hashed}
 	if err := usrv.mongoCo.Insert(&newUser); err != nil {
-		log.Fatal().Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return res, err
 	}
 	res.Ok = USER_QUERY_OK
@@ -282,7 +282,7 @@ func (usrv *UserSrv) getUserbyUname(ctx context.Context, username string) (*User
 		log.Debug().Msgf("Found user %v in DB: %v", username, user)
 		encodedUser, err := json.Marshal(user)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
 		usrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedUser})

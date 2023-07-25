@@ -53,6 +53,10 @@ type HomeSrv struct {
 	IpAddr       string
 	wCounter     *tracing.Counter
 	rCounter     *tracing.Counter
+	gCounter     *tracing.Counter
+	cCounter     *tracing.Counter
+	uCounter     *tracing.Counter
+	iCounter     *tracing.Counter
 }
 
 func MakeHomeSrv() *HomeSrv {
@@ -102,6 +106,10 @@ func MakeHomeSrv() *HomeSrv {
 		cachec:       cachec,
 		wCounter:     tracing.MakeCounter("Write-Home"),
 		rCounter:     tracing.MakeCounter("Read-Home"),
+		gCounter:     tracing.MakeCounter("Get-Home"),
+		uCounter:     tracing.MakeCounter("Update-Homes"),
+		cCounter:     tracing.MakeCounter("Write-Home-Cache"),
+		iCounter:     tracing.MakeCounter("Write-Home-Inner"),
 	}
 }
 
@@ -187,8 +195,12 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 	}
 	log.Debug().Msgf("Updating timeline for %v users", len(otherUserIds))
 	missing := false
+	t1 := time.Now()
+	defer hsrv.uCounter.AddTimeSince(t1)
 	for userid := range otherUserIds {
+		t2 := time.Now()
 		hometl, err := hsrv.getHomeTimeline(ctx, userid)
+		hsrv.gCounter.AddTimeSince(t2)
 		if err != nil {
 			res.Ok = res.Ok + fmt.Sprintf(" Error getting home timeline for %v.", userid)	
 			missing = true
@@ -199,10 +211,13 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 		key := HOME_CACHE_PREFIX + strconv.FormatInt(userid, 10) 
 		encodedHometl, err := json.Marshal(hometl)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
+		t3 := time.Now()
 		hsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedHometl})
+		hsrv.cCounter.AddTimeSince(t3)
+		hsrv.iCounter.AddTimeSince(t2)
 	}
 	if !missing {
 		res.Ok = HOME_QUERY_OK
@@ -212,8 +227,8 @@ func (hsrv *HomeSrv) WriteHomeTimeline(
 
 func (hsrv *HomeSrv) ReadHomeTimeline(
 		ctx context.Context, req *tlpb.ReadTimelineRequest) (*tlpb.ReadTimelineResponse, error) {
-	t0 := time.Now()
-	defer hsrv.rCounter.AddTimeSince(t0)
+	//t0 := time.Now()
+	//defer hsrv.rCounter.AddTimeSince(t0)
 	res := &tlpb.ReadTimelineResponse{Ok: "No"}
 	timeline, err := hsrv.getHomeTimeline(ctx, req.Userid)
 	if err != nil {

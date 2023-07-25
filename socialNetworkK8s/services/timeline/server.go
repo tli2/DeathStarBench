@@ -244,7 +244,7 @@ func (tlsrv *TimelineSrv) getUserTimeline(ctx context.Context, userid int64) (*T
 		log.Debug().Msgf("Found timeline %v in DB: %v", userid, timeline)
 		encodedTimeline, err := json.Marshal(timeline)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
 		tlsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedTimeline})

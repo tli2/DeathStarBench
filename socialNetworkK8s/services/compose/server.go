@@ -204,6 +204,7 @@ func (csrv *ComposeSrv) ComposePost(
 		ctx context.Context, req *proto.ComposePostRequest) (*proto.ComposePostResponse, error) {
 	t0 := time.Now()
 	defer csrv.cCounter.AddTimeSince(t0)
+	log.Debug().Msgf("Recieved compose request: %v", req)
 	res := &proto.ComposePostResponse{Ok: "No"}
 	timestamp := time.Now().UnixNano()
 	if req.Text == "" {
@@ -214,6 +215,7 @@ func (csrv *ComposeSrv) ComposePost(
 	textReq := &textpb.ProcessTextRequest{Text: req.Text}
 	textRes, err := csrv.textc.ProcessText(ctx, textReq)
 	if err != nil {
+		log.Error().Msgf("Error processing text: %v")
 		return res, err
 	}
 	if textRes.Ok != text.TEXT_QUERY_OK {

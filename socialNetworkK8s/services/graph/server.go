@@ -305,7 +305,7 @@ func (gsrv *GraphSrv) getFollowers(ctx context.Context, userid int64) ([]int64, 
 		log.Debug().Msgf("Found followERs for  %v in DB: %v", userid, flwERInfo)
 		encodedFlwERInfo, err := json.Marshal(flwERInfo)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
 		gsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedFlwERInfo})
@@ -335,7 +335,7 @@ func (gsrv *GraphSrv) getFollowees(ctx context.Context, userid int64) ([]int64, 
 		log.Debug().Msgf("Found followEEs for  %v in DB: %v", userid, flwEEInfo)
 		encodedFlwEEInfo, err := json.Marshal(flwEEInfo)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
 		gsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedFlwEEInfo})

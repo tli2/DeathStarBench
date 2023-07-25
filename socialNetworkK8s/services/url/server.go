@@ -190,7 +190,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 		shorturl := RandStringRunes(URL_LENGTH)
 		url := &Url{Extendedurl: extendedurl, Shorturl: shorturl}
 		if err := urlsrv.mongoCo.Insert(url); err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
 		res.Shorturls[idx] = URL_HOSTNAME + shorturl
@@ -250,7 +250,7 @@ func (urlsrv *UrlSrv) getExtendedUrl(ctx context.Context, shortUrl string) (stri
 		log.Debug().Msgf("Found url %v in DB: %v", shortUrl, url)
 		encodedUrl, err := json.Marshal(url)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return "", err
 		}
 		urlsrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedUrl})

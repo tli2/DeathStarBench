@@ -15,7 +15,7 @@ import (
 	"net/http/pprof"
 	// "os"
 	"time"
-
+	"socialnetworkk8/tracing"
 	"github.com/google/uuid"
 	//	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	cacheclnt "socialnetworkk8/services/cacheclnt"
@@ -59,6 +59,7 @@ type Server struct {
 	Port     int
 	IpAddr   string
 	pb.UnimplementedCachedServer
+	counter *tracing.Counter
 }
 
 // Run starts the server
@@ -67,7 +68,7 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	zerolog.SetGlobalLevel(zerolog.Disabled)
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
 	s.bins = make([]cache, NBIN)
 	for i := 0; i < NBIN; i++ {
@@ -75,6 +76,7 @@ func (s *Server) Run() error {
 	}
 
 	s.uuid = uuid.New().String()
+	s.counter = tracing.MakeCounter("Cache-Server")
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
@@ -82,9 +84,9 @@ func (s *Server) Run() error {
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
 		}),
-		grpc.ReadBufferSize(65536),
-		grpc.WriteBufferSize(65536),
-		grpc.MaxConcurrentStreams(10000),
+		grpc.ReadBufferSize(6553600),
+		grpc.WriteBufferSize(6553600),
+		grpc.MaxConcurrentStreams(1000000),
 	}
 	if tlsopt := tls.GetServerOpt(); tlsopt != nil {
 		opts = append(opts, tlsopt)
@@ -135,6 +137,8 @@ func (s *Server) registerWithServers() {
 }
 
 func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, error) {
+	st := time.Now()
+	defer s.counter.AddTimeSince(st)
 	b := key2bin(req.Key)
 
 	s.bins[b].Lock()
@@ -149,6 +153,7 @@ func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, er
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, error) {
 	st := time.Now()
+	defer s.counter.AddTimeSince(st)
 	res := &pb.GetResult{}
 
 	b := key2bin(req.Key)
@@ -169,6 +174,7 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, er
 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResult, error) {
 	st := time.Now()
+	defer s.counter.AddTimeSince(st)
 	res := &pb.DeleteResult{}
 	b := key2bin(req.Key)
 	s2 := time.Now()

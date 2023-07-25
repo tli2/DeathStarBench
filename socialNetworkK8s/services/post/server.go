@@ -163,7 +163,7 @@ func (psrv *PostSrv) StorePost(
 	res.Ok = "No"
 	postBson := postToBson(req.Post)
 	if err := psrv.mongoCo.Insert(postBson); err != nil {
-		log.Fatal().Msg(err.Error())
+		log.Error().Msg(err.Error())
 		return res, err
 	}
 	res.Ok = POST_QUERY_OK
@@ -216,7 +216,7 @@ func (psrv *PostSrv) getPost(ctx context.Context, postid int64) (*PostBson, erro
 		log.Debug().Msgf("Found post %v in DB: %v", postid, postBson)
 		encodedPost, err := json.Marshal(postBson)	
 		if err != nil {
-			log.Fatal().Msg(err.Error())
+			log.Error().Msg(err.Error())
 			return nil, err
 		}
 		psrv.cachec.Set(ctx, &memcache.Item{Key: key, Value: encodedPost})
