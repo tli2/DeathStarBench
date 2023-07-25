@@ -10,8 +10,9 @@ import (
 	"time"
 	"fmt"
 	"strings"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -60,8 +61,7 @@ type UrlSrv struct {
 	proto.UnimplementedUrlServer 
 	uuid         string
 	cachec       *cacheclnt.CacheClnt
-	mongoSess    *mgo.Session
-	mongoCo      *mgo.Collection
+	mongoCo      *mongo.Collection
 	Registry     *registry.Client
 	Tracer       opentracing.Tracer
 	Port         int
@@ -108,22 +108,25 @@ func MakeUrlSrv() *UrlSrv {
 	log.Info().Msg("Consul agent initialized")
 	log.Info().Msg("Start cache and DB connections")
 	cachec := cacheclnt.MakeCacheClnt() 
-	mongoUrl := result["MongoAddress"]
+
+	mongoUrl := "mongodb://" + result["MongoAddress"]
 	log.Info().Msgf("Read database URL: %v", mongoUrl)
-	session, err := mgo.Dial(mongoUrl)
+	mongoClient, err := mongo.Connect(
+		context.Background(), options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(2048))
 	if err != nil {
 		log.Panic().Msg(err.Error())
 	}
-	collection := session.DB("socialnetwork").C("url")
-	collection.EnsureIndexKey("shorturl")
-	log.Info().Msg("New session successfull.")
+	collection := mongoClient.Database("socialnetwork").Collection("url")
+	indexModel := mongo.IndexModel{Keys: bson.D{{"shorturl", 1}}}
+	name, err := collection.Indexes().CreateOne(context.TODO(), indexModel)
+	log.Info().Msgf("Name of index created: %v", name)
+	log.Info().Msg("New mongo session successfull...")
 	return &UrlSrv{
 		Port:         serv_port,
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
 		cachec:       cachec,
-		mongoSess:    session,
 		mongoCo:      collection,
 		cCounter:     tracing.MakeCounter("Compose-Url"),
 	}
@@ -189,7 +192,7 @@ func (urlsrv *UrlSrv) ComposeUrls(
 	for idx, extendedurl := range req.Extendedurls {
 		shorturl := RandStringRunes(URL_LENGTH)
 		url := &Url{Extendedurl: extendedurl, Shorturl: shorturl}
-		if err := urlsrv.mongoCo.Insert(url); err != nil {
+		if _, err := urlsrv.mongoCo.InsertOne(context.TODO(), url); err != nil {
 			log.Error().Msg(err.Error())
 			return nil, err
 		}
@@ -239,14 +242,13 @@ func (urlsrv *UrlSrv) getExtendedUrl(ctx context.Context, shortUrl string) (stri
 			return "", err
 		}
 		log.Debug().Msgf("url %v cache miss", key)
-		var urls []Url
-		if err = urlsrv.mongoCo.Find(&bson.M{"shorturl": urlKey}).All(&urls); err != nil {
+		err = urlsrv.mongoCo.FindOne(context.TODO(), &bson.M{"shorturl": urlKey}).Decode(&url)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return "", nil
+			}
 			return "", err
 		} 
-		if len(urls) == 0 {
-			return "", nil
-		}
-		url = &urls[0]
 		log.Debug().Msgf("Found url %v in DB: %v", shortUrl, url)
 		encodedUrl, err := json.Marshal(url)	
 		if err != nil {

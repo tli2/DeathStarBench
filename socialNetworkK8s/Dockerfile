@@ -16,7 +16,7 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git config pull.rebase false && \
   git pull && \
   cd src && \
-  ./all.bash
+  ./make.bash
 
 RUN git config --global http.sslverify false
 WORKDIR /go/src/socialnetworkk8

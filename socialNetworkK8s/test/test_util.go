@@ -5,13 +5,15 @@ import (
 	"strconv"
 	"fmt"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"socialnetworkk8/services/cacheclnt"
 	"socialnetworkk8/services/user"
 	"socialnetworkk8/tune"
 	"os/exec"
 	"time"
+	"context"
 )
 
 const (
@@ -31,9 +33,9 @@ func StartFowarding(service, testPort, targetPort string) (*exec.Cmd, error) {
 }
 
 type TestUtil struct {
-	mongoSess    *mgo.Session
-	cachec       *cacheclnt.CacheClnt
-	fcmd         *exec.Cmd
+	mclnt  *mongo.Client
+	cachec *cacheclnt.CacheClnt
+	fcmd   *exec.Cmd
 }
 
 func makeTestUtil() (*TestUtil, error) {
@@ -45,31 +47,41 @@ func makeTestUtil() (*TestUtil, error) {
 		log.Error().Msgf("Cannot forward mongodb port: %v", err)
 		return nil, err
 	}
-	session, err := mgo.Dial("localhost:"+MONGO_FWD_PORT)
+
+	mongoUrl := "mongodb://localhost:" + MONGO_FWD_PORT
+	client, err := mongo.Connect(
+		context.Background(), options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(2048))
 	if err != nil {
 		log.Error().Msgf("Cannot dial to Mongo: %v", err)
 		return nil, err
 	}
-	log.Info().Msg("New session successfull...")
-	return &TestUtil{session, cachec, fcmd}, nil
+	log.Info().Msg("New mongo session successfull...")
+	return &TestUtil{client, cachec, fcmd}, nil
 }
 
 func (tu *TestUtil) clearDB() error {
 	log.Info().Msg("Removing mongo DB contents ...")
-	tu.mongoSess.DB("socialnetwork").C("post").RemoveAll(&bson.M{})
-	tu.mongoSess.DB("socialnetwork").C("graph-follower").RemoveAll(&bson.M{})
-	tu.mongoSess.DB("socialnetwork").C("graph-followee").RemoveAll(&bson.M{})
-	tu.mongoSess.DB("socialnetwork").C("timeline").RemoveAll(&bson.M{})
-	tu.mongoSess.DB("socialnetwork").C("url").RemoveAll(&bson.M{})
-	tu.mongoSess.DB("socialnetwork").C("media").RemoveAll(&bson.M{})
+	tu.mclnt.Database("socialnetwork").Collection("post").DeleteMany(context.TODO(), &bson.M{})
+	tu.mclnt.Database("socialnetwork").Collection("graph-follower").DeleteMany(context.TODO(), &bson.M{})
+	tu.mclnt.Database("socialnetwork").Collection("graph-followee").DeleteMany(context.TODO(), &bson.M{})
+	tu.mclnt.Database("socialnetwork").Collection("timeline").DeleteMany(context.TODO(), &bson.M{})
+	tu.mclnt.Database("socialnetwork").Collection("url").DeleteMany(context.TODO(), &bson.M{})
+	tu.mclnt.Database("socialnetwork").Collection("media").DeleteMany(context.TODO(), &bson.M{})
 	log.Info().Msg("Re-ensuring mongo DB indexes ...")
-	tu.mongoSess.DB("socialnetwork").C("user").EnsureIndexKey("username")
-	tu.mongoSess.DB("socialnetwork").C("post").EnsureIndexKey("postid")
-	tu.mongoSess.DB("socialnetwork").C("graph-follower").EnsureIndexKey("userid")
-	tu.mongoSess.DB("socialnetwork").C("graph-followee").EnsureIndexKey("userid")
-	tu.mongoSess.DB("socialnetwork").C("url").EnsureIndexKey("shorturl")
-	tu.mongoSess.DB("socialnetwork").C("timeline").EnsureIndexKey("userid")
-	tu.mongoSess.DB("socialnetwork").C("media").EnsureIndexKey("mediaid")
+	tu.mclnt.Database("socialnetwork").Collection("user").Indexes().CreateOne(
+		context.TODO(), mongo.IndexModel{Keys: bson.D{{"username", 1}}})
+	tu.mclnt.Database("socialnetwork").Collection("post").Indexes().CreateOne(
+		context.TODO(), mongo.IndexModel{Keys: bson.D{{"postid", 1}}})
+	tu.mclnt.Database("socialnetwork").Collection("graph-follower").Indexes().CreateOne(
+		context.TODO(), mongo.IndexModel{Keys: bson.D{{"userid", 1}}})
+	tu.mclnt.Database("socialnetwork").Collection("graph-followee").Indexes().CreateOne(
+		context.TODO(), mongo.IndexModel{Keys: bson.D{{"userid", 1}}})
+	tu.mclnt.Database("socialnetwork").Collection("url").Indexes().CreateOne(
+		context.TODO(), mongo.IndexModel{Keys: bson.D{{"shorturl", 1}}})
+	tu.mclnt.Database("socialnetwork").Collection("timeline").Indexes().CreateOne(
+		context.TODO(), mongo.IndexModel{Keys: bson.D{{"userid", 1}}})
+	tu.mclnt.Database("socialnetwork").Collection("media").Indexes().CreateOne(
+		context.TODO(), mongo.IndexModel{Keys: bson.D{{"mediaid", 1}}})
 	return nil
 }
 
@@ -83,7 +95,9 @@ func (tu *TestUtil) initUsers() error {
 			Lastname: "Lastname" + suffix,
 			Firstname: "Firstname" + suffix,
 			Password: fmt.Sprintf("%x", sha256.Sum256([]byte("p_user_" + suffix)))}
-		if err := tu.mongoSess.DB("socialnetwork").C("user").Insert(&newUser); err != nil {
+		_, err := tu.mclnt.Database("socialnetwork").Collection("user").InsertOne(
+			context.TODO(), &newUser)
+		if err != nil {
 			log.Fatal().Msg(err.Error())
 			return err
 		}
@@ -94,10 +108,12 @@ func (tu *TestUtil) initUsers() error {
 func (tu *TestUtil) initGraphs() error {
 	//user i follows user i+1
 	for i := 0; i < NUSER-1; i++ {
-		_, err1 := tu.mongoSess.DB("socialnetwork").C("graph-follower").Upsert(
-			&bson.M{"userid": int64(i+1)}, &bson.M{"$addToSet": bson.M{"edges": int64(i)}})
-		_, err2 := tu.mongoSess.DB("socialnetwork").C("graph-followee").Upsert(
-			&bson.M{"userid": int64(i)}, &bson.M{"$addToSet": bson.M{"edges": int64(i+1)}})
+		_, err1 := tu.mclnt.Database("socialnetwork").Collection("graph-follower").UpdateOne(
+			context.TODO(), &bson.M{"userid": int64(i+1)},
+			&bson.M{"$addToSet": bson.M{"edges": int64(i)}}, options.Update().SetUpsert(true))
+		_, err2 := tu.mclnt.Database("socialnetwork").Collection("graph-followee").UpdateOne(
+			context.TODO(), &bson.M{"userid": int64(i)},
+			&bson.M{"$addToSet": bson.M{"edges": int64(i+1)}}, options.Update().SetUpsert(true))
 		if err1 != nil || err2 != nil {
 			err := fmt.Errorf("error updating graph %v %v", err1, err2)
 			log.Fatal().Msg(err.Error())
@@ -108,7 +124,7 @@ func (tu *TestUtil) initGraphs() error {
 }
 
 func (tu *TestUtil) Close() {
-	tu.mongoSess.Close()
+	tu.mclnt.Disconnect(context.TODO())
 	tu.fcmd.Process.Kill()
 }
 

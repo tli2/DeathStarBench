@@ -9,9 +9,10 @@ import (
 	"time"
 	"fmt"
 	"sync"
-	"gopkg.in/mgo.v2"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"math/rand"
-	"gopkg.in/mgo.v2/bson"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -41,8 +42,7 @@ type MediaSrv struct {
 	proto.UnimplementedMediaStorageServer 
 	uuid         string
 	cachec       *cacheclnt.CacheClnt
-	mongoSess    *mgo.Session
-	mongoCo      *mgo.Collection
+	mongoCo      *mongo.Collection
 	Registry     *registry.Client
 	Tracer       opentracing.Tracer
 	Port         int
@@ -91,22 +91,24 @@ func MakeMediaSrv() *MediaSrv {
 	log.Info().Msg("Consul agent initialized")
 	log.Info().Msg("Start cache and DB connections")
 	cachec := cacheclnt.MakeCacheClnt() 
-	mongoUrl := result["MongoAddress"]
+	mongoUrl := "mongodb://" + result["MongoAddress"]
 	log.Info().Msgf("Read database URL: %v", mongoUrl)
-	session, err := mgo.Dial(mongoUrl)
+	mongoClient, err := mongo.Connect(
+		context.Background(), options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(2048))
 	if err != nil {
 		log.Panic().Msg(err.Error())
 	}
-	collection := session.DB("socialnetwork").C("media")
-	collection.EnsureIndexKey("mediaid")
-	log.Info().Msg("New session successfull.")
+	collection := mongoClient.Database("socialnetwork").Collection("media")
+	indexModel := mongo.IndexModel{Keys: bson.D{{"mediaid", 1}}}
+	name, err := collection.Indexes().CreateOne(context.TODO(), indexModel)
+	log.Info().Msgf("Name of index created: %v", name)
+	log.Info().Msg("New mongo session successfull.")
 	return &MediaSrv{
 		Port:         serv_port,
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
 		cachec:       cachec,
-		mongoSess:    session,
 		mongoCo:      collection,
 	}
 }
@@ -161,7 +163,7 @@ func (msrv *MediaSrv) StoreMedia(
 	res := &proto.StoreMediaResponse{Ok: "No"}
 	mId := msrv.getNextMediaId()
 	media := &Media{mId, req.Mediatype, req.Mediadata}
-	if err := msrv.mongoCo.Insert(media); err != nil {
+	if _, err := msrv.mongoCo.InsertOne(context.TODO(), media); err != nil {
 		log.Error().Msg(err.Error())
 		return res, err
 	}
@@ -205,14 +207,13 @@ func (msrv *MediaSrv) getMedia(ctx context.Context, mediaid int64) (*Media, erro
 			return nil, err
 		}
 		log.Info().Msgf("Media %v cache miss", key)
-		var medias []Media
-		if err = msrv.mongoCo.Find(&bson.M{"mediaid": mediaid}).All(&medias); err != nil {
+		err = msrv.mongoCo.FindOne(context.TODO(), &bson.M{"mediaid": mediaid}).Decode(&media);
+		if  err != nil {
+			if err == mongo.ErrNoDocuments {
+				return nil, nil
+			}
 			return nil, err
 		} 
-		if len(medias) == 0 {
-			return nil, nil
-		}
-		media = &medias[0]
 		log.Info().Msgf("Found media %v in DB: %v", mediaid, media)
 		encodedMedia, err := json.Marshal(media)	
 		if err != nil {

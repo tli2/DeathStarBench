@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"time"
 	"fmt"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -43,8 +44,7 @@ type TimelineSrv struct {
 	proto.UnimplementedTimelineServer 
 	uuid         string
 	cachec       *cacheclnt.CacheClnt
-	mongoSess    *mgo.Session
-	mongoCo      *mgo.Collection
+	mongoCo      *mongo.Collection
 	postc        postpb.PostStorageClient
 	Registry     *registry.Client
 	Tracer       opentracing.Tracer
@@ -93,22 +93,26 @@ func MakeTimelineSrv() *TimelineSrv {
 	log.Info().Msg("Consul agent initialized")
 	log.Info().Msg("Start cache and DB connections")
 	cachec := cacheclnt.MakeCacheClnt() 
-	mongoUrl := result["MongoAddress"]
+
+	mongoUrl := "mongodb://" + result["MongoAddress"]
 	log.Info().Msgf("Read database URL: %v", mongoUrl)
-	session, err := mgo.Dial(mongoUrl)
+	mongoClient, err := mongo.Connect(
+		context.Background(), options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(2048))
 	if err != nil {
 		log.Panic().Msg(err.Error())
 	}
-	collection := session.DB("socialnetwork").C("timeline")
-	collection.EnsureIndexKey("userid")
-	log.Info().Msg("New session successfull.")
+	collection := mongoClient.Database("socialnetwork").Collection("timeline")
+	indexModel := mongo.IndexModel{Keys: bson.D{{"userid", 1}}}
+	name, err := collection.Indexes().CreateOne(context.TODO(), indexModel)
+	log.Info().Msgf("Name of index created: %v", name)
+	log.Info().Msg("New mongo session successfull...")
+
 	return &TimelineSrv{
 		Port:         serv_port,
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
 		cachec:       cachec,
-		mongoSess:    session,
 		mongoCo:      collection,
 		wCounter:     tracing.MakeCounter("Write-Timeline"),
 		rCounter:     tracing.MakeCounter("Read-Timeline"),
@@ -175,9 +179,10 @@ func (tlsrv *TimelineSrv) WriteTimeline(
 	t0 := time.Now()
 	defer tlsrv.wCounter.AddTimeSince(t0)
 	res := &proto.WriteTimelineResponse{Ok: "No"}
-	_, err := tlsrv.mongoCo.Upsert(
-		&bson.M{"userid": req.Userid}, 
-		&bson.M{"$push": bson.M{"postids": req.Postid, "timestamps": req.Timestamp}})
+	_, err := tlsrv.mongoCo.UpdateOne(
+		context.TODO(), &bson.M{"userid": req.Userid}, 
+		&bson.M{"$push": bson.M{"postids": req.Postid, "timestamps": req.Timestamp}},
+		options.Update().SetUpsert(true))
 	if err != nil {
 		return nil, err
 	}
@@ -233,14 +238,13 @@ func (tlsrv *TimelineSrv) getUserTimeline(ctx context.Context, userid int64) (*T
 			return nil, err
 		}
 		log.Debug().Msgf("Timeline %v cache miss", key)
-		var timelines []Timeline
-		if err = tlsrv.mongoCo.Find(&bson.M{"userid": userid}).All(&timelines); err != nil {
+		err = tlsrv.mongoCo.FindOne(context.TODO(), &bson.M{"userid": userid}).Decode(&timeline)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return nil, nil
+			}
 			return nil, err
 		} 
-		if len(timelines) == 0 {
-			return nil, nil
-		}
-		timeline = &timelines[0]
 		log.Debug().Msgf("Found timeline %v in DB: %v", userid, timeline)
 		encodedTimeline, err := json.Marshal(timeline)	
 		if err != nil {

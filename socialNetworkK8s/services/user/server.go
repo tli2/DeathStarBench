@@ -10,8 +10,9 @@ import (
 	"time"
 	"fmt"
 	"math/rand"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net"
 	"sync"
 	"net/http"
@@ -44,8 +45,8 @@ type UserSrv struct {
 	proto.UnimplementedUserServer
 	uuid   		 string
 	cachec       *cacheclnt.CacheClnt
-	mongoSess    *mgo.Session
-	mongoCo      *mgo.Collection
+	mclnt        *mongo.Client
+	mongoCo      *mongo.Collection
 	Registry     *registry.Client
 	Tracer       opentracing.Tracer
 	Port         int
@@ -103,23 +104,26 @@ func MakeUserSrv() *UserSrv {
 	log.Info().Msg("Consul agent initialized")
 	log.Info().Msg("Start cache and DB connections")
 	cachec := cacheclnt.MakeCacheClnt() 
-	mongoUrl := result["MongoAddress"]
+
+	mongoUrl := "mongodb://" + result["MongoAddress"]
 	log.Info().Msgf("Read database URL: %v", mongoUrl)
-	session, err := mgo.Dial(mongoUrl)
+	mongoClient, err := mongo.Connect(
+		context.Background(), options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(2048))
 	if err != nil {
 		log.Panic().Msg(err.Error())
 	}
-	collection := session.DB("socialnetwork").C("user")
-	collection.EnsureIndexKey("userid")
-
-	log.Info().Msg("New session successfull...")
+	collection := mongoClient.Database("socialnetwork").Collection("user")
+	indexModel := mongo.IndexModel{Keys: bson.D{{"username", 1}}}
+	name, err := collection.Indexes().CreateOne(context.TODO(), indexModel)
+	log.Info().Msgf("Name of index created: %v", name)
+	log.Info().Msg("New mongo session successfull...")
 	return &UserSrv{
 		Port:         serv_port,
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
 		cachec:       cachec,
-		mongoSess:    session,
+		mclnt:        mongoClient,
 		mongoCo:      collection,
 		dbCounter:    tracing.MakeCounter("DB"),
 		cacheCounter: tracing.MakeCounter("Cache"),
@@ -177,7 +181,7 @@ func (usrv *UserSrv) Run() error {
 
 // Shutdown cleans up any processes
 func (usrv *UserSrv) Shutdown() {
-	usrv.mongoSess.Close()
+	usrv.mclnt.Disconnect(context.Background())
 	usrv.Registry.Deregister(usrv.uuid)
 }
 
@@ -230,7 +234,7 @@ func (usrv *UserSrv) RegisterUser(
 		Lastname: req.Lastname,
 		Firstname: req.Firstname,
 		Password: pswd_hashed}
-	if err := usrv.mongoCo.Insert(&newUser); err != nil {
+	if _, err := usrv.mongoCo.InsertOne(context.TODO(), &newUser); err != nil {
 		log.Error().Msg(err.Error())
 		return res, err
 	}
@@ -268,17 +272,15 @@ func (usrv *UserSrv) getUserbyUname(ctx context.Context, username string) (*User
 			return nil, err
 		}
 		log.Debug().Msgf("User %v cache miss", key)
-		var users []User
 		t1 := time.Now()
-		err = usrv.mongoCo.Find(&bson.M{"username": username}).All(&users)
+		err = usrv.mongoCo.FindOne(context.TODO(), &bson.M{"username": username}).Decode(&user)
 		usrv.dbCounter.AddTimeSince(t1)
 		if  err != nil {
+			if err == mongo.ErrNoDocuments {
+				return nil, nil
+			}
 			return nil, err
 		} 
-		if len(users) == 0 {
-			return nil, nil
-		}
-		user = &users[0]
 		log.Debug().Msgf("Found user %v in DB: %v", username, user)
 		encodedUser, err := json.Marshal(user)	
 		if err != nil {

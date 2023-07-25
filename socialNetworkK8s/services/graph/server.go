@@ -8,8 +8,9 @@ import (
 	"strconv"
 	"time"
 	"fmt"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -45,9 +46,8 @@ type GraphSrv struct {
 	proto.UnimplementedGraphServer 
 	uuid         string
 	cachec       *cacheclnt.CacheClnt
-	mongoSess    *mgo.Session
-	mongoFlwERCo *mgo.Collection
-	mongoFlwEECo *mgo.Collection
+	mongoFlwERCo *mongo.Collection
+	mongoFlwEECo *mongo.Collection
 	userc        userpb.UserClient
 	Registry     *registry.Client
 	Tracer       opentracing.Tracer
@@ -95,24 +95,27 @@ func MakeGraphSrv() *GraphSrv {
 	log.Info().Msg("Consul agent initialized")
 	log.Info().Msg("Start cache and DB connections")
 	cachec := cacheclnt.MakeCacheClnt() 
-	mongoUrl := result["MongoAddress"]
+	mongoUrl := "mongodb://" + result["MongoAddress"]
 	log.Info().Msgf("Read database URL: %v", mongoUrl)
-	session, err := mgo.Dial(mongoUrl)
+	mongoClient, err := mongo.Connect(
+		context.Background(), options.Client().ApplyURI(mongoUrl).SetMaxPoolSize(2048))
 	if err != nil {
 		log.Panic().Msg(err.Error())
 	}
-	followersCo := session.DB("socialnetwork").C("graph-follower")
-	followersCo.EnsureIndexKey("userid")
-	followeesCo := session.DB("socialnetwork").C("graph-followee")
-	followeesCo.EnsureIndexKey("userid")
-	log.Info().Msg("New session successfull.")
+	followersCo := mongoClient.Database("socialnetwork").Collection("graph-follower")
+	followeesCo := mongoClient.Database("socialnetwork").Collection("graph-followee")
+	indexModel := mongo.IndexModel{Keys: bson.D{{"userid", 1}}}
+	name1, _ := followersCo.Indexes().CreateOne(context.TODO(), indexModel)
+	log.Info().Msgf("Name of index created for followers: %v", name1)
+	name2, _ := followeesCo.Indexes().CreateOne(context.TODO(), indexModel)
+	log.Info().Msgf("Name of index created for followees: %v", name2)
+	log.Info().Msg("New mongo session successfull.")
 	return &GraphSrv{
 		Port:         serv_port,
 		IpAddr:       serv_ip,
 		Tracer:       tracer,
 		Registry:     registry,
 		cachec:       cachec,
-		mongoSess:    session,
 		mongoFlwERCo: followersCo,
 		mongoFlwEECo: followeesCo,
 		fCounter:     tracing.MakeCounter("Get-Follower"),
@@ -237,18 +240,18 @@ func (gsrv *GraphSrv) updateGraph(
 	}
 	var err1, err2 error
 	if isFollow {
-		_, err1 = gsrv.mongoFlwERCo.Upsert(
-			&bson.M{"userid": followeeid}, 
-			&bson.M{"$addToSet": bson.M{"edges": followerid}})
-		_, err2 = gsrv.mongoFlwEECo.Upsert(
-			&bson.M{"userid": followerid}, 
-			&bson.M{"$addToSet": bson.M{"edges": followeeid}})
+		_, err1 = gsrv.mongoFlwERCo.UpdateOne(
+			context.TODO(), &bson.M{"userid": followeeid}, 
+			&bson.M{"$addToSet": bson.M{"edges": followerid}}, options.Update().SetUpsert(true))
+		_, err2 = gsrv.mongoFlwEECo.UpdateOne(
+			context.TODO(), &bson.M{"userid": followerid}, 
+			&bson.M{"$addToSet": bson.M{"edges": followeeid}}, options.Update().SetUpsert(true))
 	} else {
-		err1 = gsrv.mongoFlwERCo.Update(
-			&bson.M{"userid": followeeid}, 
+		_, err1 = gsrv.mongoFlwERCo.UpdateOne(
+			context.TODO(), &bson.M{"userid": followeeid}, 
 			&bson.M{"$pull": bson.M{"edges": followerid}})
-		err2 = gsrv.mongoFlwEECo.Update(
-			&bson.M{"userid": followerid}, 
+		_, err2 = gsrv.mongoFlwEECo.UpdateOne(
+			context.TODO(), &bson.M{"userid": followerid}, 
 			&bson.M{"$pull": bson.M{"edges": followeeid}})
 	}
 	if err1 != nil || err2 != nil {
@@ -294,14 +297,14 @@ func (gsrv *GraphSrv) getFollowers(ctx context.Context, userid int64) ([]int64, 
 			return nil, err
 		}
 		log.Debug().Msgf("FollowER %v cache miss", key)
-		var edgeInfos []EdgeInfo
-		if err = gsrv.mongoFlwERCo.Find(&bson.M{"userid": userid}).All(&edgeInfos); err != nil {
+		err = gsrv.mongoFlwERCo.FindOne(
+			context.TODO(), &bson.M{"userid": userid}).Decode(&flwERInfo)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return make([]int64, 0), nil
+			}
 			return nil, err
-		} 
-		if len(edgeInfos) == 0 {
-			return make([]int64, 0), nil
 		}
-		flwERInfo = &edgeInfos[0]
 		log.Debug().Msgf("Found followERs for  %v in DB: %v", userid, flwERInfo)
 		encodedFlwERInfo, err := json.Marshal(flwERInfo)	
 		if err != nil {
@@ -324,14 +327,14 @@ func (gsrv *GraphSrv) getFollowees(ctx context.Context, userid int64) ([]int64, 
 			return nil, err
 		}
 		log.Debug().Msgf("FollowEE %v cache miss", key)
-		var edgeInfos []EdgeInfo
-		if err = gsrv.mongoFlwEECo.Find(&bson.M{"userid": userid}).All(&edgeInfos); err != nil {
+		err = gsrv.mongoFlwEECo.FindOne(
+			context.TODO(), &bson.M{"userid": userid}).Decode(&flwEEInfo)
+		if err != nil {
+			if err == mongo.ErrNoDocuments {
+				return make([]int64, 0), nil
+			}
 			return nil, err
-		} 
-		if len(edgeInfos) == 0 {
-			return make([]int64, 0), nil
 		}
-		flwEEInfo = &edgeInfos[0]
 		log.Debug().Msgf("Found followEEs for  %v in DB: %v", userid, flwEEInfo)
 		encodedFlwEEInfo, err := json.Marshal(flwEEInfo)	
 		if err != nil {
