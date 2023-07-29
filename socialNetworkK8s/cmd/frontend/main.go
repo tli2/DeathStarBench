@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 	"time"
-
+	"runtime/debug"
 	"socialnetworkk8/registry"
 	"socialnetworkk8/services/frontend"
 	"socialnetworkk8/tracing"
@@ -17,6 +17,7 @@ import (
 )
 
 func main() {
+	debug.SetGCPercent(-1)
 	tune.Init()
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Timestamp().Caller().Logger()
 

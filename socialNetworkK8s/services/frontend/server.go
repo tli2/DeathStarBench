@@ -104,6 +104,7 @@ func (s *FrontendSrv) Run() error {
 	s.tCounter = tracing.MakeCounter("Front-Timeline")
 	s.cCounter = tracing.MakeCounter("Front-Compose")
 	s.p = MakePerf("social-network-perf/k8s", "social-netowrk")
+	s.record = false
 
 	log.Info().Msg("Successfull")
 
