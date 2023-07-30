@@ -10,7 +10,7 @@ metadata:
     io.kompose.service: cached
   name: cached
 spec:
-  replicas: 4
+  replicas: 3
   selector:
     matchLabels:
       io.kompose.service: cached
@@ -37,9 +37,7 @@ spec:
             - containerPort: 5555
           resources:
             requests:
-              cpu: 1000m
-            limits:
-              cpu: 2000m
+              cpu: 950m
           env:
             - name: POD_IP_ADDR
               valueFrom:

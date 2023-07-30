@@ -38,6 +38,6 @@ spec:
             requests:
               cpu: 0m
             limits:
-              cpu: 1000m
+              cpu: 500m
       restartPolicy: Always
 status: {}

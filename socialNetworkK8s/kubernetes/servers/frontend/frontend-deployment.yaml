@@ -35,9 +35,7 @@ spec:
             - containerPort: 5000
           resources:
             requests:
-              cpu: 2900m
-            limits:
-              cpu: 4000m
+              cpu: 950m
           env:
             - name: AWS_ACCESS_KEY_ID
               valueFrom:

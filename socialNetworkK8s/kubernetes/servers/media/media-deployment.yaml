@@ -36,8 +36,6 @@ spec:
             - containerPort: 9999
           resources:
             requests:
-              cpu: 1000m
-            limits:
-              cpu: 2000m
+              cpu: 0m
       restartPolicy: Always
 status: {}

@@ -200,3 +200,26 @@ func TestUserAndGraph(t *testing.T) {
 	assert.Nil(t, fcmdu.Process.Kill())
 	assert.Nil(t, fcmdg.Process.Kill())
 }
+
+func TestRPCTime(t *testing.T) {
+	// start k8s port forwarding and set up client connection.
+	testPort := "9000"
+	fcmd, err := StartFowarding("user", testPort, "8084")
+	assert.Nil(t, err)
+	conn, err := dialer.Dial("localhost:" + testPort, nil)
+	assert.Nil(t, err, fmt.Sprintf("dialer error: %v", err))
+	userClient := userpb.NewUserClient(conn)
+	assert.NotNil(t, userClient)
+
+	// check user
+	arg_check := &userpb.CheckUserRequest{Usernames: []string{"user_1"}}
+	for i := 0; i < 5001; i ++ {
+		res_check, err := userClient.CheckUser(context.Background(), arg_check)
+		assert.Nil(t, err)
+		assert.Equal(t, "No", res_check.Ok)
+		assert.Equal(t, int64(1), res_check.Userids[0])
+	}
+
+	// Stop fowarding
+	assert.Nil(t, fcmd.Process.Kill())
+}
