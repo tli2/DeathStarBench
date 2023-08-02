@@ -213,10 +213,10 @@ func TestRPCTime(t *testing.T) {
 
 	// check user
 	arg_check := &userpb.CheckUserRequest{Usernames: []string{"user_1"}}
-	for i := 0; i < 5001; i ++ {
+	for i := 0; i < 5015; i ++ {
 		res_check, err := userClient.CheckUser(context.Background(), arg_check)
 		assert.Nil(t, err)
-		assert.Equal(t, "No", res_check.Ok)
+		assert.Equal(t, "OK", res_check.Ok)
 		assert.Equal(t, int64(1), res_check.Userids[0])
 	}
 

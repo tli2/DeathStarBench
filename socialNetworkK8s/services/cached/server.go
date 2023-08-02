@@ -15,7 +15,6 @@ import (
 	"net/http/pprof"
 	// "os"
 	"time"
-	"socialnetworkk8/tracing"
 	"github.com/google/uuid"
 	//	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
 	cacheclnt "socialnetworkk8/services/cacheclnt"
@@ -35,6 +34,8 @@ const (
 )
 
 var CACHE_SERVICES = []string{"user", "graph", "url", "media", "post", "timeline", "home"}
+//var CACHE_SERVICES = []string{"user"}
+
 
 func key2bin(key string) uint32 {
 	h := fnv.New32a()
@@ -59,7 +60,6 @@ type Server struct {
 	Port     int
 	IpAddr   string
 	pb.UnimplementedCachedServer
-	counter *tracing.Counter
 }
 
 // Run starts the server
@@ -76,7 +76,6 @@ func (s *Server) Run() error {
 	}
 
 	s.uuid = uuid.New().String()
-	s.counter = tracing.MakeCounter("Cache-Server")
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			Timeout: 120 * time.Second,
@@ -137,8 +136,6 @@ func (s *Server) registerWithServers() {
 }
 
 func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, error) {
-	st := time.Now()
-	defer s.counter.AddTimeSince(st)
 	b := key2bin(req.Key)
 
 	s.bins[b].Lock()
@@ -153,7 +150,6 @@ func (s *Server) Set(ctx context.Context, req *pb.SetRequest) (*pb.SetResult, er
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, error) {
 	st := time.Now()
-	defer s.counter.AddTimeSince(st)
 	res := &pb.GetResult{}
 
 	b := key2bin(req.Key)
@@ -174,7 +170,6 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResult, er
 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResult, error) {
 	st := time.Now()
-	defer s.counter.AddTimeSince(st)
 	res := &pb.DeleteResult{}
 	b := key2bin(req.Key)
 	s2 := time.Now()

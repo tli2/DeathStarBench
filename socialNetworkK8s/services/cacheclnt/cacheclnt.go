@@ -12,9 +12,7 @@ import (
 	"sync/atomic"
 	"socialnetworkk8/dialer"
 	cached "socialnetworkk8/services/cached/proto"
-	"socialnetworkk8/tracing"
 	"github.com/bradfitz/gomemcache/memcache"
-	"time"
 )
 
 const (
@@ -39,14 +37,12 @@ type CacheClnt struct {
 	mu  sync.Mutex
 	ccs [][]cached.CachedClient
 	ncs int32
-	counter *tracing.Counter
 	selector *Selector
 }
 
 func MakeCacheClnt() *CacheClnt {
 	c := &CacheClnt{
 		ccs: make([][]cached.CachedClient, 0),
-		counter: tracing.MakeCounter("Cache-Client"),
 		selector: MakeSelector(N_RPC_SESSIONS),
 	}
 
@@ -56,8 +52,6 @@ func MakeCacheClnt() *CacheClnt {
 }
 
 func (c *CacheClnt) Get(ctx context.Context, key string) (*memcache.Item, error) {
-	t0 := time.Now()
-	defer c.counter.AddTimeSince(t0)
 	if c.ncs == 0 {
 		return nil, fmt.Errorf("No caches registered")
 	}
@@ -76,8 +70,6 @@ func (c *CacheClnt) Get(ctx context.Context, key string) (*memcache.Item, error)
 }
 
 func (c *CacheClnt) Set(ctx context.Context, item *memcache.Item) bool {
-	t0 := time.Now()
-	defer c.counter.AddTimeSince(t0)
 	n := c.key2shard(item.Key)
 	req := cached.SetRequest{
 		Key: item.Key,
@@ -91,8 +83,6 @@ func (c *CacheClnt) Set(ctx context.Context, item *memcache.Item) bool {
 }
 
 func (c *CacheClnt) Delete(ctx context.Context, key string) bool {
-	t0 := time.Now()
-	defer c.counter.AddTimeSince(t0)
 	n := c.key2shard(key)
 	req := cached.DeleteRequest{Key: key}
 	res, err := c.ccs[n][c.selector.Next()].Delete(ctx, &req)
