@@ -14,12 +14,14 @@ import (
 	"socialnetworkk8/tune"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"fmt"
 )
 
 func main() {
+	fmt.Printf("Start time: %v", time.Now().String())
 	debug.SetGCPercent(-1)
 	tune.Init()
-	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Timestamp().Caller().Logger()
+	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339Nano}).With().Timestamp().Caller().Logger()
 
 	log.Info().Msg("Reading config...")
 	jsonFile, err := os.Open("config.json")
