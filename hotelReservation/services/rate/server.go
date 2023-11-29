@@ -199,7 +199,7 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 						log.Error().Msgf("Failed to marshal plan [Code: %v] with error: %s", r.Code, err)
 					}
 					memc_str = memc_str + string(rate_json) + "\n"
-					log.Trace().Msg(fmt.SPrintf("Rate plan room type [hotelID=%v]: %v rp %v", hotelID, r.RoomType, r))
+					log.Trace().Msg(fmt.Sprintf("Rate plan room type [hotelID=%v]: %v rp %v", hotelID, r.RoomType, r))
 				}
 				log.Trace().Msg(fmt.Sprintf("Write to memcached [hotelID=%v]: \"%v\" %v", hotelID, memc_str, tmpRatePlans))
 			}
