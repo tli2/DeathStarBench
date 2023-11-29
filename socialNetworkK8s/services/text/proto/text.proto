@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package text;
+
+option go_package = "./services/text/proto";
+
+service Text {
+	rpc ProcessText(ProcessTextRequest) returns (ProcessTextResponse);
+}
+
+message ProcessTextRequest {
+	string text = 1;
+}
+
+message ProcessTextResponse {
+	string          ok = 1;
+	string          text = 2;
+	repeated int64  usermentions = 3;
+	repeated string urls = 4; 
+}

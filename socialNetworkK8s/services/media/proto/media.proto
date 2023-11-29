@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package media;
+
+option go_package = "./services/media/proto";
+
+
+service MediaStorage {
+	rpc StoreMedia(StoreMediaRequest) returns (StoreMediaResponse);
+	rpc ReadMedia(ReadMediaRequest) returns (ReadMediaResponse);
+}
+
+message StoreMediaRequest {
+	string mediatype = 1;
+	bytes  mediadata = 2;
+}
+
+message StoreMediaResponse {
+	string ok = 1;
+	int64  mediaid = 2;
+}
+
+message ReadMediaRequest {
+	repeated int64 mediaids = 1;
+}
+
+message ReadMediaResponse {
+	string          ok = 1;
+	repeated string mediatypes = 2;
+	repeated bytes  mediadatas = 3;
+}

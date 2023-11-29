@@ -2,6 +2,15 @@
   "consulAddress": "consul:8500",
   "jaegerAddress": "jaeger:6831",
   "FrontendPort": "5000",
-  "GeoPort": "8083",
-  "GeoMongoAddress": "mongodb-geo:27017",
+  "CachedPort": "8091",
+  "ComposePort":"8081",
+  "MediaPort": "8082",
+  "UserPort": "8084",
+  "GraphPort": "8085",
+  "PostPort": "8086",
+  "UrlPort": "8087",
+  "TextPort": "8088",
+  "TimelinePort": "8089",
+  "HomePort": "8090",
+  "MongoAddress": "mongodb-sn:27017"
 }

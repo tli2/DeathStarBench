@@ -2,12 +2,13 @@ package dialer
 
 import (
 	"fmt"
+	"log"
+	"net"
+	"strconv"
 	"time"
-
 	"github.com/grpc-ecosystem/grpc-opentracing/go/otgrpc"
-	"github.com/harlow/go-micro-services/tls"
+	"socialnetworkk8/tls"
 	consul "github.com/hashicorp/consul/api"
-	lb "github.com/olivere/grpc/lb/consul"
 	opentracing "github.com/opentracing/opentracing-go"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -24,26 +25,30 @@ func WithTracer(tracer opentracing.Tracer) DialOption {
 }
 
 // WithBalancer enables client side load balancing
-func WithBalancer(registry *consul.Client) DialOption {
-	return func(name string) (grpc.DialOption, error) {
-		r, err := lb.NewResolver(registry, name, "")
-		if err != nil {
-			return nil, err
-		}
-		return grpc.WithBalancer(grpc.RoundRobin(r)), nil
-	}
+//func WithBalancer(registry *consul.Client) DialOption {
+//	return func(name string) (grpc.DialOption, error) {
+//		r, err := lb.NewResolver(registry, name, "")
+//		if err != nil {
+//			return nil, err
+//		}
+//		return grpc.WithBalancer(grpc.RoundRobin(r)), nil
+//	}
+//}
+func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.ClientConn, error) {
+	return Diall(0, name, registry, opts ...)
 }
 
-// Dial returns a load balanced grpc client conn with tracing interceptor
-func Dial(name string, opts ...DialOption) (*grpc.ClientConn, error) {
 
+// Dial returns a load balanced grpc client conn with tracing interceptor
+func Diall(label int, name string, registry *consul.Client, opts ...DialOption) (*grpc.ClientConn, error) {
 	dialopts := []grpc.DialOption{
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
+			Time:                1 * time.Hour,
 			Timeout:             120 * time.Second,
 			PermitWithoutStream: true,
 		}),
-		grpc.WithReadBufferSize(65536),
-		grpc.WithWriteBufferSize(65536),
+		grpc.WithReadBufferSize(6553600+label),
+		grpc.WithWriteBufferSize(6553600+label),
 	}
 	if tlsopt := tls.GetDialOpt(); tlsopt != nil {
 		dialopts = append(dialopts, tlsopt)
@@ -59,10 +64,25 @@ func Dial(name string, opts ...DialOption) (*grpc.ClientConn, error) {
 		dialopts = append(dialopts, opt)
 	}
 
-	conn, err := grpc.Dial(name, dialopts...)
+	addr := name
+	if registry != nil {
+		srvs, _, err := registry.Health().Service(name, "", true, &consul.QueryOptions{
+			WaitIndex: 0,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial 1 %s: %v", name, err)
+		}
+		if len(srvs) > 1 {
+			fmt.Printf("All srvs: %v\n", srvs)
+		}
+
+		i := len(srvs) - 1
+		addr = net.JoinHostPort(srvs[i].Service.Address, strconv.Itoa(srvs[i].Service.Port))
+	}
+	log.Printf("Dialing %v addr %v", name, addr)
+	conn, err := grpc.Dial(addr, dialopts...)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial %s: %v", name, err)
 	}
-
 	return conn, nil
 }

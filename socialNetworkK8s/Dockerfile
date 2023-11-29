@@ -3,11 +3,11 @@
 FROM golang 
 
 # Download an initial version of Go
-RUN wget "https://go.dev/dl/go1.20.4.linux-amd64.tar.gz" && \
-  tar -C /usr/local -xzf go1.20.4.linux-amd64.tar.gz
+#RUN wget "https://go.dev/dl/go1.20.2.linux-amd64.tar.gz" && \
+#  tar -C /usr/local -xzf go1.20.2.linux-amd64.tar.gz
 
 # Set the PATH to include the new Go install.
-ENV PATH="${PATH}:/usr/local/go/bin"
+#ENV PATH="${PATH}:/usr/local/go/bin"
 
 # Install custom version of go with larger minimum stack size.
 RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
@@ -16,13 +16,11 @@ RUN git clone https://github.com/ArielSzekely/go.git go-custom && \
   git config pull.rebase false && \
   git pull && \
   cd src && \
-  ./all.bash
+  ./make.bash
 
 RUN git config --global http.sslverify false
-WORKDIR /go/src/github.com/harlow/go-micro-services
+WORKDIR /go/src/socialnetworkk8
 COPY go.* .
-RUN go mod download
-COPY . /go/src/github.com/harlow/go-micro-services
-RUN /go/go-custom/bin/go mod vendor
+COPY . /go/src/socialnetworkk8
 
 RUN --mount=type=cache,target=/root/.cache/go-build /go/go-custom/bin/go install -ldflags="-s -w" ./cmd/...

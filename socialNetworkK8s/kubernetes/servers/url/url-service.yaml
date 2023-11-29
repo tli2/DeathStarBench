@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: url
+  name: url
+spec:
+  ports:
+    - name: "8087"
+      port: 8087
+      targetPort: 8087
+    - name: "5000"
+      port: 5000
+      targetPort: 5000
+    - name: "9999"
+      port: 9999
+      targetPort: 9999
+  selector:
+    io.kompose.service: url
+status:
+  loadBalancer: {}

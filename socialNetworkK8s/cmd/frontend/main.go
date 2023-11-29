@@ -7,16 +7,17 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/harlow/go-micro-services/registry"
-	"github.com/harlow/go-micro-services/services/frontend"
-	"github.com/harlow/go-micro-services/tracing"
-	"github.com/harlow/go-micro-services/tune"
+	"runtime/debug"
+	"socialnetworkk8/registry"
+	"socialnetworkk8/services/frontend"
+	"socialnetworkk8/tracing"
+	"socialnetworkk8/tune"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
 
 func main() {
+	debug.SetGCPercent(-1)
 	tune.Init()
 	log.Logger = zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}).With().Timestamp().Caller().Logger()
 
@@ -58,7 +59,7 @@ func main() {
 	}
 	log.Info().Msg("Consul agent initialized")
 
-	srv := &frontend.Server{
+	fsrv := &frontend.FrontendSrv{
 		Registry: registry,
 		Tracer:   tracer,
 		IpAddr:   serv_ip,
@@ -66,5 +67,5 @@ func main() {
 	}
 
 	log.Info().Msg("Starting server...")
-	log.Fatal().Msg(srv.Run().Error())
+	log.Fatal().Msg(fsrv.Run().Error())
 }

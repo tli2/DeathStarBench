@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package home;
+
+option go_package = "./services/home/proto";
+
+import "services/timeline/proto/timeline.proto";
+
+service Home {
+	rpc WriteHomeTimeline(WriteHomeTimelineRequest) returns (timeline.WriteTimelineResponse);
+	rpc ReadHomeTimeline(timeline.ReadTimelineRequest) returns (timeline.ReadTimelineResponse);
+}
+
+message WriteHomeTimelineRequest {
+	int64          userid = 1;
+	int64          postid = 2;
+	int64          timestamp = 3;
+	repeated int64 usermentionids = 4;
+}
+
