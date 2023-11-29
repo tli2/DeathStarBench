@@ -30,6 +30,25 @@ import (
 	// "strings"
 )
 
+type Hotel struct {
+	Id          string   `bson:"id"`
+	Name        string   `bson:"name"`
+	PhoneNumber string   `bson:"phoneNumber"`
+	Description string   `bson:"description"`
+	Address     *Address `bson:"address"`
+}
+
+type Address struct {
+	StreetNumber string  `bson:"streetNumber"`
+	StreetName   string  `bson:"streetName"`
+	City         string  `bson:"city"`
+	State        string  `bson:"state"`
+	Country      string  `bson:"country"`
+	PostalCode   string  `bson:"postalCode"`
+	Lat          float32 `bson:"lat"`
+	Lon          float32 `bson:"lon"`
+}
+
 const name = "srv-profile"
 
 // Server implements the profile service
@@ -152,7 +171,7 @@ func (s *Server) GetProfiles(ctx context.Context, req *pb.Request) (*pb.Result, 
 			defer session.Close()
 			c := session.DB("profile-db").C("hotels")
 
-			hotel_prof := new(pb.Hotel)
+			hotel_prof := new(Hotel)
 			err := c.Find(bson.M{"id": i}).One(&hotel_prof)
 
 			if err != nil {
@@ -162,7 +181,22 @@ func (s *Server) GetProfiles(ctx context.Context, req *pb.Request) (*pb.Result, 
 			// for _, h := range hotels {
 			// 	res.Hotels = append(res.Hotels, h)
 			// }
-			hotels = append(hotels, hotel_prof)
+			hotels = append(hotels, &pb.Hotel{
+				Id:          hotel_prof.Id,
+				Name:        hotel_prof.Name,
+				PhoneNumber: hotel_prof.PhoneNumber,
+				Description: hotel_prof.Description,
+				Address: &pb.Address{
+					StreetNumber: hotel_prof.Address.StreetNumber,
+					StreetName:   hotel_prof.Address.StreetName,
+					City:         hotel_prof.Address.City,
+					State:        hotel_prof.Address.State,
+					Country:      hotel_prof.Address.Country,
+					PostalCode:   hotel_prof.Address.PostalCode,
+					Lat:          hotel_prof.Address.Lat,
+					Lon:          hotel_prof.Address.Lon,
+				},
+			})
 
 			prof_json, err := json.Marshal(hotel_prof)
 			if err != nil {
