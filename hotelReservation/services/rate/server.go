@@ -35,6 +35,22 @@ import (
 
 const name = "srv-rate"
 
+type RoomType struct {
+	BookableRate       float64 `bson:"bookableRate"`
+	Code               string  `bson:"code"`
+	RoomDescription    string  `bson:"roomDescription"`
+	TotalRate          float64 `bson:"totalRate"`
+	TotalRateInclusive float64 `bson:"totalRateInclusive"`
+}
+
+type RatePlan struct {
+	HotelId  string    `bson:"hotelId"`
+	Code     string    `bson:"code"`
+	InDate   string    `bson:"inDate"`
+	OutDate  string    `bson:"outDate"`
+	RoomType *RoomType `bson:"roomType"`
+}
+
 // Server implements the rate service
 type Server struct {
 	pb.UnimplementedRateServer
@@ -159,20 +175,33 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 
 			memc_str := ""
 
-			tmpRatePlans := make(RatePlans, 0)
+			tmpRatePlans := make([]*RatePlan, 0)
 			err := c.Find(&bson.M{"hotelId": hotelID}).All(&tmpRatePlans)
 			if err != nil {
 				log2.Printf("Tried to find hotelId [%v], but got error", hotelID, err.Error())
 				log.Panic().Msgf("Tried to find hotelId [%v], but got error", hotelID, err.Error())
 			} else {
 				for _, r := range tmpRatePlans {
-					ratePlans = append(ratePlans, r)
+					ratePlans = append(ratePlans, &pb.RatePlan{
+						HotelId: r.HotelId,
+						Code:    r.Code,
+						InDate:  r.InDate,
+						OutDate: r.OutDate,
+						RoomType: &pb.RoomType{
+							BookableRate:       r.RoomType.BookableRate,
+							Code:               r.RoomType.Code,
+							RoomDescription:    r.RoomType.RoomDescription,
+							TotalRate:          r.RoomType.TotalRate,
+							TotalRateInclusive: r.RoomType.TotalRateInclusive,
+						}})
 					rate_json, err := json.Marshal(r)
 					if err != nil {
 						log.Error().Msgf("Failed to marshal plan [Code: %v] with error: %s", r.Code, err)
 					}
 					memc_str = memc_str + string(rate_json) + "\n"
+					log.Trace().Msg(fmt.SPrintf("Rate plan room type [hotelID=%v]: %v rp %v", hotelID, r.RoomType, r))
 				}
+				log.Trace().Msg(fmt.Sprintf("Write to memcached [hotelID=%v]: \"%v\" %v", hotelID, memc_str, tmpRatePlans))
 			}
 
 			// write to memcached
