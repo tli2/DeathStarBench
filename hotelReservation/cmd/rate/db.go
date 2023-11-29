@@ -1,6 +1,7 @@
 package main
 
 import (
+	log2 "log"
 	"strconv"
 
 	"github.com/rs/zerolog/log"
@@ -39,7 +40,7 @@ func initializeDatabase(url string) *mgo.Session {
 		log.Fatal().Msg(err.Error())
 	}
 	if count == 0 {
-		err = c.Insert(&RatePlan{
+		rp := &RatePlan{
 			"1",
 			"RACK",
 			"2015-04-09",
@@ -49,7 +50,8 @@ func initializeDatabase(url string) *mgo.Session {
 				"KNG",
 				"King sized bed",
 				109.00,
-				123.17}})
+				123.17}}
+		err = c.Insert(rp)
 		if err != nil {
 			log.Fatal().Msg(err.Error())
 		}
@@ -60,7 +62,7 @@ func initializeDatabase(url string) *mgo.Session {
 		log.Fatal().Msg(err.Error())
 	}
 	if count == 0 {
-		err = c.Insert(&RatePlan{
+		rp := &RatePlan{
 			"2",
 			"RACK",
 			"2015-04-09",
@@ -70,7 +72,8 @@ func initializeDatabase(url string) *mgo.Session {
 				"QN",
 				"Queen sized bed",
 				139.00,
-				153.09}})
+				153.09}}
+		err = c.Insert(rp)
 		if err != nil {
 			log.Fatal().Msg(err.Error())
 		}
@@ -81,7 +84,7 @@ func initializeDatabase(url string) *mgo.Session {
 		log.Fatal().Msg(err.Error())
 	}
 	if count == 0 {
-		err = c.Insert(&RatePlan{
+		rp := &RatePlan{
 			"3",
 			"RACK",
 			"2015-04-09",
@@ -91,7 +94,8 @@ func initializeDatabase(url string) *mgo.Session {
 				"KNG",
 				"King sized bed",
 				109.00,
-				123.17}})
+				123.17}}
+		err = c.Insert(rp)
 		if err != nil {
 			log.Fatal().Msg(err.Error())
 		}
@@ -129,7 +133,7 @@ func initializeDatabase(url string) *mgo.Session {
 			}
 
 			if count == 0 {
-				err = c.Insert(&RatePlan{
+				rp := &RatePlan{
 					hotel_id,
 					"RACK",
 					"2015-04-09",
@@ -139,10 +143,14 @@ func initializeDatabase(url string) *mgo.Session {
 						"KNG",
 						"King sized bed",
 						rate,
-						rate_inc}})
+						rate_inc}}
+				err = c.Insert(rp)
+				log2.Printf("Insert RoomType [hotelID=%v]: %v", hotel_id, rp.RoomType)
 				if err != nil {
 					log.Fatal().Msg(err.Error())
 				}
+			} else {
+				log2.Printf("[hotelID=%v] room count already >1 %v", hotel_id, count)
 			}
 		}
 	}
