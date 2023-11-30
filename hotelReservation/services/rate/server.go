@@ -72,6 +72,7 @@ func (s *Server) Run() error {
 	}
 
 	zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	//zerolog.SetGlobalLevel(zerolog.TraceLevel)
 
 	s.uuid = uuid.New().String()
 	s.MemcClient.MaxIdleConns = 8000
@@ -79,7 +80,7 @@ func (s *Server) Run() error {
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Timeout: 120 * time.Second,
+			Timeout: 120 * time.Hour,
 		}),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
@@ -145,9 +146,9 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 		var item *memcache.Item
 		var err error
 		if !cacheclnt.UseCached() {
-			item, err = s.MemcClient.Get(hotelID)
+			item, err = s.MemcClient.Get(hotelID + "-rate")
 		} else {
-			item, err = s.cc.Get(ctx, hotelID)
+			item, err = s.cc.Get(ctx, hotelID+"-rate")
 		}
 
 		if err == nil {
@@ -205,7 +206,7 @@ func (s *Server) GetRates(ctx context.Context, req *pb.Request) (*pb.Result, err
 			}
 
 			// write to memcached
-			item := &memcache.Item{Key: hotelID, Value: []byte(memc_str)}
+			item := &memcache.Item{Key: hotelID + "-rate", Value: []byte(memc_str)}
 			if !cacheclnt.UseCached() {
 				s.MemcClient.Set(item)
 			} else {
