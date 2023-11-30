@@ -22,5 +22,6 @@ RUN git config --global http.sslverify false
 WORKDIR /go/src/socialnetworkk8
 COPY go.* .
 COPY . /go/src/socialnetworkk8
+RUN go mod vendor
 
 RUN --mount=type=cache,target=/root/.cache/go-build /go/go-custom/bin/go install -ldflags="-s -w" ./cmd/...
