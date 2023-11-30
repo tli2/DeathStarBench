@@ -72,6 +72,7 @@ func (s *Server) Run() error {
 	}
 
 	zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	//	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 
 	s.uuid = uuid.New().String()
 	s.MemcClient.MaxIdleConns = 8000
@@ -81,7 +82,7 @@ func (s *Server) Run() error {
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Timeout: 120 * time.Second,
+			Timeout: 120 * time.Hour,
 		}),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
@@ -151,9 +152,9 @@ func (s *Server) GetProfiles(ctx context.Context, req *pb.Request) (*pb.Result, 
 		var item *memcache.Item
 		var err error
 		if !cacheclnt.UseCached() {
-			item, err = s.MemcClient.Get(i)
+			item, err = s.MemcClient.Get(i + "-prof")
 		} else {
-			item, err = s.cc.Get(ctx, i)
+			item, err = s.cc.Get(ctx, i+"-prof")
 		}
 
 		if err == nil {
@@ -161,9 +162,27 @@ func (s *Server) GetProfiles(ctx context.Context, req *pb.Request) (*pb.Result, 
 			profile_str := string(item.Value)
 			log.Trace().Msgf("memc hit with %v", profile_str)
 
-			hotel_prof := new(pb.Hotel)
-			json.Unmarshal(item.Value, hotel_prof)
-			hotels = append(hotels, hotel_prof)
+			hotel_prof := new(Hotel)
+			err := json.Unmarshal(item.Value, hotel_prof)
+			if err != nil {
+				log.Panic().Msgf("Error unmarshal mc: %v", err)
+			}
+			hotels = append(hotels, &pb.Hotel{
+				Id:          hotel_prof.Id,
+				Name:        hotel_prof.Name,
+				PhoneNumber: hotel_prof.PhoneNumber,
+				Description: hotel_prof.Description,
+				Address: &pb.Address{
+					StreetNumber: hotel_prof.Address.StreetNumber,
+					StreetName:   hotel_prof.Address.StreetName,
+					City:         hotel_prof.Address.City,
+					State:        hotel_prof.Address.State,
+					Country:      hotel_prof.Address.Country,
+					PostalCode:   hotel_prof.Address.PostalCode,
+					Lat:          hotel_prof.Address.Lat,
+					Lon:          hotel_prof.Address.Lon,
+				},
+			})
 
 		} else if err == memcache.ErrCacheMiss {
 			// memcached miss, set up mongo connection
@@ -205,7 +224,7 @@ func (s *Server) GetProfiles(ctx context.Context, req *pb.Request) (*pb.Result, 
 			memc_str := string(prof_json)
 
 			// write to memcached
-			item := &memcache.Item{Key: i, Value: []byte(memc_str)}
+			item := &memcache.Item{Key: i + "-prof", Value: []byte(memc_str)}
 			if !cacheclnt.UseCached() {
 				s.MemcClient.Set(item)
 			} else {
