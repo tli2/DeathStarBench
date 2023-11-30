@@ -45,7 +45,8 @@ func (s *Server) Run() error {
 		return fmt.Errorf("Server port must be set")
 	}
 
-	zerolog.SetGlobalLevel(zerolog.Disabled)
+	//	zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	zerolog.SetGlobalLevel(zerolog.PanicLevel)
 
 	log.Info().Msg("Initializing gRPC clients...")
 	if err := s.initSearchClient("srv-search"); err != nil {

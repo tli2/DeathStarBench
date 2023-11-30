@@ -60,6 +60,7 @@ func (s *Server) Run() error {
 	}
 
 	zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	//	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 
 	s.uuid = uuid.New().String()
 	s.MemcClient.MaxIdleConns = 8000
@@ -67,7 +68,7 @@ func (s *Server) Run() error {
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Timeout: 120 * time.Second,
+			Timeout: 120 * time.Hour,
 		}),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,

@@ -65,7 +65,8 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	zerolog.SetGlobalLevel(zerolog.Disabled)
+	//	zerolog.SetGlobalLevel(zerolog.TraceLevel)
+	zerolog.SetGlobalLevel(zerolog.PanicLevel)
 
 	s.bins = make([]cache, NBIN)
 	for i := 0; i < NBIN; i++ {
@@ -82,7 +83,7 @@ func (s *Server) Run() error {
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Timeout: 120 * time.Second,
+			Timeout: 120 * time.Hour,
 		}),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,

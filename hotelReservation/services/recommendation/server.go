@@ -48,7 +48,8 @@ func (s *Server) Run() error {
 		return fmt.Errorf("server port must be set")
 	}
 
-	zerolog.SetGlobalLevel(zerolog.Disabled)
+	zerolog.SetGlobalLevel(zerolog.PanicLevel)
+	//	zerolog.SetGlobalLevel(zerolog.TraceLevel)
 
 	if s.hotels == nil {
 		s.hotels = loadRecommendations(s.MongoSession)
@@ -58,7 +59,7 @@ func (s *Server) Run() error {
 
 	opts := []grpc.ServerOption{
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Timeout: 120 * time.Second,
+			Timeout: 120 * time.Hour,
 		}),
 		grpc.KeepaliveEnforcementPolicy(keepalive.EnforcementPolicy{
 			PermitWithoutStream: true,
