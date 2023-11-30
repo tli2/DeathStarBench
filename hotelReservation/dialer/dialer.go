@@ -41,7 +41,7 @@ func Dial(name string, registry *consul.Client, opts ...DialOption) (*grpc.Clien
 
 	dialopts := []grpc.DialOption{
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Timeout:             120 * time.Second,
+			Timeout:             120 * time.Hour,
 			PermitWithoutStream: true,
 		}),
 		grpc.WithReadBufferSize(65536),
