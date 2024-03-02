@@ -28,14 +28,14 @@ spec:
       containers:
         - command:
             - rate
-          image: arielszekely/hotelreservation:latest
+          image: tianyuli96/hotelreservation:latest
           name: hotel-reserv-rate
           ports:
             - containerPort: 8084
             - containerPort: 9999
           resources:
             requests:
-              cpu: 1900m
+              cpu: 1500m
             limits:
               cpu: 4000m
           envFrom:

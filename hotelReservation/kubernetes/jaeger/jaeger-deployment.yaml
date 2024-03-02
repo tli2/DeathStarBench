@@ -42,7 +42,7 @@ spec:
               protocol: UDP
           resources:
             requests:
-              cpu: 0m
+              cpu: 100m
             limits:
               cpu: 4000m
       restartPolicy: Always

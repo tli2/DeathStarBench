@@ -5,7 +5,7 @@ cd $(dirname $0)/..
 
 EXEC="docker buildx"
 
-USER="arielszekely"
+USER="tianyuli96"
 
 TAG="latest"
 

@@ -28,13 +28,13 @@ spec:
       containers:
         - command:
             - user
-          image: arielszekely/hotelreservation:latest
+          image: tianyuli96/hotelreservation:latest
           name: hotel-reserv-user
           ports:
             - containerPort: 8086
           resources:
             requests:
-              cpu: 0m
+              cpu: 100m
             limits:
               cpu: 4000m
       restartPolicy: Always

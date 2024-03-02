@@ -29,7 +29,7 @@ spec:
       containers:
         - command:
             - reservation
-          image: arielszekely/hotelreservation:latest
+          image: tianyuli96/hotelreservation:latest
           name: hotel-reserv-reservation
           ports:
             - containerPort: 5555
@@ -37,7 +37,7 @@ spec:
             - containerPort: 9999
           resources:
             requests:
-              cpu: 2900m
+              cpu: 2000m
             limits:
               cpu: 4000m
           envFrom:

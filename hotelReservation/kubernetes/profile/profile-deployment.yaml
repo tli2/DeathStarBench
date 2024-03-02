@@ -29,14 +29,14 @@ spec:
       containers:
         - command:
             - profile
-          image: arielszekely/hotelreservation:latest
+          image: tianyuli96/hotelreservation:latest
           name: hotel-reserv-profile
           ports:
             - containerPort: 8081
             - containerPort: 9999
           resources:
             requests:
-              cpu: 1900m
+              cpu: 1500m
             limits:
               cpu: 4000m
           envFrom:

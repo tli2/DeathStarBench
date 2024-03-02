@@ -28,13 +28,13 @@ spec:
       containers:
         - command:
             - recommendation
-          image: arielszekely/hotelreservation:latest
+          image: tianyuli96/hotelreservation:latest
           name: hotel-reserv-recommendation
           ports:
             - containerPort: 8085
           resources:
             requests:
-              cpu: 0m
+              cpu: 100m
             limits:
               cpu: 4000m
       restartPolicy: Always
